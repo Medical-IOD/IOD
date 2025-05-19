@@ -52,9 +52,16 @@ def filter_profitable(df):
     if st.session_state.profit_only:
         if "ASP Profit/Loss" in df.columns and "AWP Profit/Loss" in df.columns:
             try:
-            asp = pd.to_numeric(df["ASP Profit/Loss"], errors="coerce")
-            awp = pd.to_numeric(df["AWP Profit/Loss"], errors="coerce")
-            return df[(asp > 0) | (awp > 0)]
+                asp = pd.to_numeric(df["ASP Profit/Loss"], errors="coerce")
+                awp = pd.to_numeric(df["AWP Profit/Loss"], errors="coerce")
+                return df[(asp > 0) | (awp > 0)]
+            except Exception as e:
+                st.warning("Error filtering profitable drugs: " + str(e))
+                return df
+        else:
+            st.warning("Profit columns not found. Showing all data.")
+            return df
+    return df[(asp > 0) | (awp > 0)]
         except Exception as e:
             st.warning("Error filtering profitable drugs: " + str(e))
             return df
