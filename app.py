@@ -19,11 +19,9 @@ if uploaded_file is not None:
     df["Dose_MG"] = df["Strength"].str.extract(r"([\d,.]+)").replace(",", "", regex=True).astype(float)
     df["Rx Count"] = pd.to_numeric(df["Rx Count"], errors="coerce")
     df["Purchase Price Per Code UOM"] = pd.to_numeric(df["Purchase Price Per Code UOM"].astype(str).str.replace("[$,]", "", regex=True), errors="coerce")
+    df["ASP Profit/Loss"] = pd.to_numeric(df["ASP Profit/Loss"].astype(str).str.replace("[$,]", "", regex=True), errors="coerce")
+    df["AWP Profit/Loss"] = pd.to_numeric(df["AWP Profit/Loss"].astype(str).str.replace("[$,]", "", regex=True), errors="coerce")
 
-    df["ASP Reimbursement"] = df["Purchase Price Per Code UOM"] * 1.04
-    df["AWP Reimbursement"] = df["Purchase Price Per Code UOM"] * 0.81
-    df["ASP Profit/Loss"] = df["ASP Reimbursement"] - df["Purchase Price Per Code UOM"]
-    df["AWP Profit/Loss"] = df["AWP Reimbursement"] - df["Purchase Price Per Code UOM"]
     df["ASP per Rx"] = df["Dose_MG"] * df["ASP Profit/Loss"]
     df["AWP per Rx"] = df["Dose_MG"] * df["AWP Profit/Loss"]
     df["ASP All Dispense"] = df["ASP per Rx"] * df["Rx Count"]
@@ -64,13 +62,13 @@ if uploaded_file is not None:
 
     st.subheader("📋 Non-MediHive Scenario")
     st.dataframe(df_nonmedi, use_container_width=True)
+    st.markdown(f"**Total ASP Profit:** ${df_nonmedi['6M ASP Total'].sum():,.2f}")
+    st.markdown(f"**Total AWP Profit:** ${df_nonmedi['6M AWP Total'].sum():,.2f}")
+    st.markdown(f"**Non-MediHive Total Expenses:** ${total_nonmedi_expense:,.2f}")
 
     st.subheader("📘 Calculation Explanations")
     st.markdown("""
-    - **ASP Reimbursement** = Purchase Price Per Code UOM × 1.04  
-    - **AWP Reimbursement** = Purchase Price Per Code UOM × 0.81  
-    - **ASP Profit/Loss** = ASP Reimbursement − Purchase Price Per Code UOM  
-    - **AWP Profit/Loss** = AWP Reimbursement − Purchase Price Per Code UOM  
+    - **ASP Profit/Loss** and **AWP Profit/Loss** are loaded directly from your uploaded sheet.  
     - **ASP per Rx** = Total Unit of Measure × ASP Profit/Loss  
     - **AWP per Rx** = Total Unit of Measure × AWP Profit/Loss  
     - **ASP All Dispense** = ASP per Rx × Rx Count  
