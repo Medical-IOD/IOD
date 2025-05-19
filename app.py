@@ -1,8 +1,6 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.ticker as mtick
 
 st.set_page_config(page_title="MediHive In-Office Dispensing Pro Forma", layout="wide")
 
@@ -22,10 +20,15 @@ if uploaded_file is not None:
     df["Rx Count"] = pd.to_numeric(df["Rx Count"], errors="coerce")
     df["Purchase Price Per Code UOM"] = pd.to_numeric(df["Purchase Price Per Code UOM"], errors="coerce")
 
+    # Reimbursement Calculations
     df["ASP Reimbursement"] = df["Purchase Price Per Code UOM"] * 1.04
     df["AWP Reimbursement"] = df["Purchase Price Per Code UOM"] * 0.81
     df["ASP Profit/Loss"] = df["ASP Reimbursement"] - df["Purchase Price Per Code UOM"]
     df["AWP Profit/Loss"] = df["AWP Reimbursement"] - df["Purchase Price Per Code UOM"]
+    df["ASP per Rx"] = df["Dose_MG"] * df["ASP Profit/Loss"]
+    df["AWP per Rx"] = df["Dose_MG"] * df["AWP Profit/Loss"]
+    df["ASP All Dispense"] = df["ASP per Rx"] * df["Rx Count"]
+    df["AWP All Dispense"] = df["AWP per Rx"] * df["Rx Count"]
 
     st.sidebar.title("🔧 Adjust Inputs")
     courier_rate = st.sidebar.number_input("Courier Cost per Rx", min_value=0.0, value=8.0, step=0.5)
@@ -37,58 +40,43 @@ if uploaded_file is not None:
     emr_cost = st.sidebar.number_input("EMR Cost (6 months)", min_value=0.0, step=100.0)
     psao_cost = st.sidebar.number_input("PSAO Cost (6 months)", min_value=0.0, step=100.0)
 
-    editable_df = st.data_editor(df, use_container_width=True, num_rows="dynamic", key="main_table")
+    df["Courier Cost"] = df["Rx Count"] * courier_rate
+    df["Misc Cost"] = df["Rx Count"] * misc_expense
+    df["Total Variable Cost"] = df["Courier Cost"] + df["Misc Cost"]
 
-    editable_df["ASP per Rx"] = editable_df["Dose_MG"] * editable_df["ASP Profit/Loss"]
-    editable_df["AWP per Rx"] = editable_df["Dose_MG"] * editable_df["AWP Profit/Loss"]
-    editable_df["ASP All Dispense"] = editable_df["ASP per Rx"] * editable_df["Rx Count"]
-    editable_df["AWP All Dispense"] = editable_df["AWP per Rx"] * editable_df["Rx Count"]
-    editable_df["Courier Cost"] = editable_df["Rx Count"] * courier_rate
-    editable_df["Misc Cost"] = editable_df["Rx Count"] * misc_expense
-    editable_df["Total Variable Cost"] = editable_df["Courier Cost"] + editable_df["Misc Cost"]
-    editable_df["6M ASP Total"] = editable_df["ASP All Dispense"] - editable_df["Total Variable Cost"]
-    editable_df["6M AWP Total"] = editable_df["AWP All Dispense"] - editable_df["Total Variable Cost"]
+    df_medi = df.copy()
+    df_medi["6M ASP Total"] = df_medi["ASP All Dispense"] - df_medi["Total Variable Cost"]
+    df_medi["6M AWP Total"] = df_medi["AWP All Dispense"] - df_medi["Total Variable Cost"]
+    df_medi["MediHive ASP Share"] = df_medi["6M ASP Total"] * 0.20
+    df_medi["MediHive AWP Share"] = df_medi["6M AWP Total"] * 0.20
 
-    st.subheader("📋 Profitability Table (Editable)")
-    st.dataframe(editable_df, use_container_width=True)
+    df_nonmedi = df.copy()
+    nonmed_total_cost = pharmacist_cost + technician_cost + emr_cost + psao_cost
+    df_nonmedi["6M ASP Total"] = df_nonmedi["ASP All Dispense"] - df_nonmedi["Total Variable Cost"] - (nonmed_total_cost / len(df_nonmedi))
+    df_nonmedi["6M AWP Total"] = df_nonmedi["AWP All Dispense"] - df_nonmedi["Total Variable Cost"] - (nonmed_total_cost / len(df_nonmedi))
 
-    # Base: MediHive share summary (20% of net)
-    base_asp = editable_df["6M ASP Total"].sum()
-    base_awp = editable_df["6M AWP Total"].sum()
-    medihive_asp = base_asp * 0.20
-    medihive_awp = base_awp * 0.20
+    st.subheader("📋 MediHive Scenario (20% Service Share)")
+    st.dataframe(df_medi, use_container_width=True)
 
-    # With Non-MediHiveRx factors
-    other_total_costs = pharmacist_cost + technician_cost + emr_cost + psao_cost
-    alt_asp = base_asp - other_total_costs
-    alt_awp = base_awp - other_total_costs
-
-    st.subheader("📈 Scenario Comparison")
-    col1, col2 = st.columns(2)
-    with col1:
-        st.metric("MediHive 6M ASP Profit", f"${base_asp:,.2f}")
-        st.metric("MediHive Share (20%)", f"${medihive_asp:,.2f}")
-        st.metric("MediHive 6M AWP Profit", f"${base_awp:,.2f}")
-        st.metric("MediHive Share (20%)", f"${medihive_awp:,.2f}")
-    with col2:
-        st.metric("Non-MediHive ASP Profit (after labor)", f"${alt_asp:,.2f}")
-        st.metric("Non-MediHive AWP Profit (after labor)", f"${alt_awp:,.2f}")
+    st.subheader("📋 Non-MediHive Scenario (Full Labor Deduction)")
+    st.dataframe(df_nonmedi, use_container_width=True)
 
     st.subheader("📘 Calculation Explanations")
     st.markdown("""
-    - **ASP Profit/Loss** = (Purchase Price per Code UOM × 1.04) − Purchase Price per Code UOM  
-    - **AWP Profit/Loss** = (Purchase Price per Code UOM × 0.81) − Purchase Price per Code UOM  
+    - **ASP Reimbursement** = Purchase Price Per Code UOM × 1.04  
+    - **AWP Reimbursement** = Purchase Price Per Code UOM × 0.81  
+    - **ASP Profit/Loss** = ASP Reimbursement − Purchase Price Per Code UOM  
+    - **AWP Profit/Loss** = AWP Reimbursement − Purchase Price Per Code UOM  
     - **ASP per Rx** = Dose × ASP Profit/Loss  
     - **AWP per Rx** = Dose × AWP Profit/Loss  
     - **ASP All Dispense** = ASP per Rx × Rx Count  
     - **AWP All Dispense** = AWP per Rx × Rx Count  
     - **Courier Cost** = Rx Count × Courier Rate  
-    - **Misc Cost** = Rx Count × Miscellaneous Supply Cost  
-    - **Total Variable Cost** = Courier Cost + Misc Cost  
-    - **6M ASP Total** = ASP All Dispense − Total Variable Cost  
-    - **6M AWP Total** = AWP All Dispense − Total Variable Cost  
-    - **MediHive Share** = 20% of ASP or AWP Net Profit  
-    - **Non-MediHive Total** = 6M Net Profit − (Pharmacist + Technician + EMR + PSAO Costs)  
+    - **Misc Cost** = Rx Count × Misc Supply Cost  
+    - **Total Variable Cost** = Courier + Misc  
+    - **MediHive 6M Total** = (ASP or AWP All Dispense − Total Variable Cost)  
+    - **MediHive Share** = 20% of MediHive 6M Profit  
+    - **Non-MediHive 6M Profit** = (ASP or AWP All Dispense − Total Variable Cost − Total Labor/EMR/PSAO costs)  
     """)
 
 else:
