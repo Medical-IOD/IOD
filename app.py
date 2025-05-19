@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import re
 
 st.set_page_config(page_title="MediHiveRx Profitability Tool", layout="wide")
 
@@ -33,18 +34,25 @@ emr_cost = st.sidebar.number_input("EMR Monthly Fee ($)", value=500.0)
 psao_fee = st.sidebar.number_input("PSAO Monthly Fee ($)", value=300.0)
 
 # --- DATA PROCESSING ---
+def clean_currency_column(series):
+    return (
+        series.astype(str)
+        .str.replace(r"[^\d\-.]", "", regex=True)
+        .str.replace(r"−", "-", regex=True)
+        .str.strip()
+        .apply(lambda x: float(x) if re.match(r"^-?\d+(\.\d+)?$", x) else np.nan)
+    )
+
 def prepare_data(df):
     df = df.copy()
 
-    # Strip currency symbols and convert to signed numeric values
-    dollar_cols = [
+    currency_cols = [
         "ASP Profit/Loss", "AWP Profit/Loss", "NDC Purchase Price",
         "Purchase Price Per Code UOM", "CMS Payment Limit Profit/Loss"
     ]
-    for col in dollar_cols:
+    for col in currency_cols:
         if col in df.columns:
-            df[col] = df[col].astype(str).str.replace(r"[\$,]", "", regex=True).str.strip()
-            df[col] = pd.to_numeric(df[col], errors="coerce")
+            df[col] = clean_currency_column(df[col])
         else:
             st.warning(f"Missing required column: {col}. Filling with zeros.")
             df[col] = 0.0
@@ -56,7 +64,6 @@ def prepare_data(df):
             df[col] = 0.0
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
 
-    # Ensure no zero division
     safe_uom = df["Code UOM"].replace(0, np.nan).fillna(1)
     dose = df["Dose"].fillna(0)
     df["ASP per Rx"] = (dose / safe_uom) * df["ASP Profit/Loss"].fillna(0)
@@ -66,7 +73,6 @@ def prepare_data(df):
 
     return df
 
-# --- FILTER PROFITABLE ---
 def filter_profitable(df):
     asp = pd.to_numeric(df["ASP Profit/Loss"], errors="coerce")
     awp = pd.to_numeric(df["AWP Profit/Loss"], errors="coerce")
