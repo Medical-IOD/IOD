@@ -35,11 +35,24 @@ psao_fee = st.sidebar.number_input("PSAO Monthly Fee ($)", value=300.0)
 # --- DATA PROCESSING ---
 def prepare_data(df):
     df = df.copy()
-    required_cols = ["ASP Profit/Loss", "AWP Profit/Loss", "Dose", "Rx Count", "Code UOM"]
+
+    # Strip dollar signs and convert to numeric for currency columns
+    dollar_cols = [
+        "ASP Profit/Loss", "AWP Profit/Loss", "NDC Purchase Price",
+        "Purchase Price Per Code UOM", "CMS Payment Limit Profit/Loss"
+    ]
+    for col in dollar_cols:
+        if col in df.columns:
+            df[col] = df[col].replace('[\$,]', '', regex=True).astype(float)
+        else:
+            st.warning(f"Missing required column: {col}. Filling with zeros.")
+            df[col] = 0.0
+
+    required_cols = ["Dose", "Rx Count", "Code UOM"]
     for col in required_cols:
         if col not in df.columns:
             st.warning(f"Missing required column: {col}. Filling with zeros.")
-            df[col] = 0
+            df[col] = 0.0
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
 
     safe_uom = df["Code UOM"].replace(0, np.nan)
@@ -57,7 +70,7 @@ def filter_profitable(df):
 
 # --- MAIN ---
 if uploaded_file:
-    df_raw = pd.read_excel(uploaded_file)
+    df_raw = pd.read_excel(uploaded_file, sheet_name="Drug-Profitability")
     df = prepare_data(df_raw)
     vol = df["Rx Count"].sum()
 
