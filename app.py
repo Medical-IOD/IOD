@@ -19,23 +19,27 @@ if uploaded_file is not None:
     df["NDC"] = df["NDC"].astype(str).str.replace("-", "").str.strip()
     df["Strength"] = df["Strength"].astype(str)
     df["Dose_MG"] = df["Strength"].str.extract(r"([\d,.]+)").replace(",", "", regex=True).astype(float)
-    df["ASP Profit/Loss"] = pd.to_numeric(df["ASP Profit/Loss"].astype(str).str.replace("[$,()]", "", regex=True).str.replace(")", "-"), errors="coerce")
-    df["AWP Profit/Loss"] = pd.to_numeric(df["AWP Profit/Loss"].astype(str).str.replace("[$,()]", "", regex=True).str.replace(")", "-"), errors="coerce")
     df["Rx Count"] = pd.to_numeric(df["Rx Count"], errors="coerce")
+
+    # Compute ASP and AWP reimbursement assumptions
+    df["Purchase Price Per Code UOM"] = pd.to_numeric(df["Purchase Price Per Code UOM"], errors="coerce")
+    df["ASP Reimbursement"] = df["Purchase Price Per Code UOM"] * 1.04
+    df["AWP Reimbursement"] = df["Purchase Price Per Code UOM"] * 0.81
+    df["ASP Profit/Loss"] = df["ASP Reimbursement"] - df["Purchase Price Per Code UOM"]
+    df["AWP Profit/Loss"] = df["AWP Reimbursement"] - df["Purchase Price Per Code UOM"]
 
     st.sidebar.title("🔧 Adjust Inputs")
     courier_rate = st.sidebar.number_input("Courier Cost per Rx", min_value=0.0, value=8.0, step=0.5)
     misc_expense = st.sidebar.number_input("Misc. Supply Cost per Rx (Boxes, Bags, Insulation)", min_value=0.0, value=2.0, step=0.5)
+
+    st.sidebar.title("🏥 Non-MediHiveRx Factors")
     pharmacist_cost = st.sidebar.number_input("Pharmacist Labor Cost (6 months)", min_value=0.0, value=20000.0, step=500.0)
     technician_cost = st.sidebar.number_input("Technician Labor Cost (6 months)", min_value=0.0, value=15000.0, step=500.0)
     emr_cost = st.sidebar.number_input("EMR Cost (6 months)", min_value=0.0, value=3000.0, step=100.0)
     psao_cost = st.sidebar.number_input("PSAO Cost (6 months)", min_value=0.0, value=2500.0, step=100.0)
 
-    df["ASP per Rx"] = df["Dose_MG"] * df["ASP Profit/Loss"]
-    df["AWP per Rx"] = df["Dose_MG"] * df["AWP Profit/Loss"]
-
     editable_df = st.data_editor(
-        df[["Drug Name", "NDC", "HCPCS", "Strength", "Rx Count", "ASP Profit/Loss", "AWP Profit/Loss"]],
+        df[["Drug Name", "NDC", "HCPCS", "Strength", "Dose_MG", "Rx Count", "ASP Profit/Loss", "AWP Profit/Loss"]],
         use_container_width=True,
         num_rows="dynamic",
         key="editable_inputs"
@@ -86,10 +90,20 @@ if uploaded_file is not None:
     | **Total**        | **${:,.2f}**    |
     """.format(pharmacist_cost, technician_cost, emr_cost, psao_cost, total_other_expense))
 
+    st.subheader("📘 Calculation Explanations")
     st.markdown("""
-    ---
-    **Note:** You can now compare MediHive's flat 20% service cost vs. traditional in-house cost categories.
-    Adjust Rx counts, courier rate, or ASP values directly above to model various scenarios.
+    - **ASP Profit/Loss** = (Purchase Price per Code UOM × 1.04) − Purchase Price per Code UOM  
+    - **AWP Profit/Loss** = (Purchase Price per Code UOM × 0.81) − Purchase Price per Code UOM  
+    - **ASP per Rx** = Dose × ASP Profit/Loss  
+    - **AWP per Rx** = Dose × AWP Profit/Loss  
+    - **ASP All Dispense** = ASP per Rx × Rx Count  
+    - **AWP All Dispense** = AWP per Rx × Rx Count  
+    - **Courier Cost** = Rx Count × Courier Rate ($8 default)  
+    - **Misc Cost** = Rx Count × Miscellaneous Supply Cost ($2 default)  
+    - **Total Variable Cost** = Courier Cost + Misc Cost  
+    - **6M ASP Total** = ASP All Dispense − Total Variable Cost  
+    - **6M AWP Total** = AWP All Dispense − Total Variable Cost  
+    - **MediHive Share** = 20% of ASP or AWP Net Profit  
     """)
 
 else:
