@@ -57,11 +57,14 @@ def prepare_data(df):
             df[col] = 0.0
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
 
-    safe_uom = df["Code UOM"].replace(0, np.nan)
-    df["ASP per Rx"] = (df["Dose"] / safe_uom) * df["ASP Profit/Loss"]
-    df["AWP per Rx"] = (df["Dose"] / safe_uom) * df["AWP Profit/Loss"]
+    # Ensure no zero division
+    safe_uom = df["Code UOM"].replace(0, np.nan).fillna(1)
+    dose = df["Dose"].fillna(0)
+    df["ASP per Rx"] = (dose / safe_uom) * df["ASP Profit/Loss"].fillna(0)
+    df["AWP per Rx"] = (dose / safe_uom) * df["AWP Profit/Loss"].fillna(0)
     df["ASP All Dispense"] = df["ASP per Rx"] * df["Rx Count"]
     df["AWP All Dispense"] = df["AWP per Rx"] * df["Rx Count"]
+
     return df
 
 # --- FILTER PROFITABLE ---
