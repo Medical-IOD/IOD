@@ -17,10 +17,10 @@ if uploaded_file is not None:
     df["NDC"] = df["NDC"].astype(str).str.replace("-", "").str.strip()
     df["Strength"] = df["Strength"].astype(str)
     df["Dose_MG"] = df["Strength"].str.extract(r"([\d,.]+)").replace(",", "", regex=True).astype(float)
-    df["Rx Count"] = pd.to_numeric(df["Rx Count"], errors="coerce")
-    df["Purchase Price Per Code UOM"] = pd.to_numeric(df["Purchase Price Per Code UOM"].astype(str).str.replace("[$,]", "", regex=True), errors="coerce")
-    df["ASP Profit/Loss"] = pd.to_numeric(df["ASP Profit/Loss"].astype(str).str.replace("[$,]", "", regex=True), errors="coerce")
-    df["AWP Profit/Loss"] = pd.to_numeric(df["AWP Profit/Loss"].astype(str).str.replace("[$,]", "", regex=True), errors="coerce")
+    df["Rx Count"] = pd.to_numeric(df["Rx Count"], errors="coerce").fillna(0)
+    df["Purchase Price Per Code UOM"] = pd.to_numeric(df["Purchase Price Per Code UOM"].astype(str).str.replace("[$,]", "", regex=True), errors="coerce").fillna(0)
+    df["ASP Profit/Loss"] = pd.to_numeric(df["ASP Profit/Loss"].astype(str).str.replace("[$,]", "", regex=True), errors="coerce").fillna(0)
+    df["AWP Profit/Loss"] = pd.to_numeric(df["AWP Profit/Loss"].astype(str).str.replace("[$,]", "", regex=True), errors="coerce").fillna(0)
 
     df["ASP per Rx"] = df["Dose_MG"] * df["ASP Profit/Loss"]
     df["AWP per Rx"] = df["Dose_MG"] * df["AWP Profit/Loss"]
@@ -57,7 +57,7 @@ if uploaded_file is not None:
     df_nonmedi["6M AWP Total"] = df_nonmedi["AWP All Dispense"] - df_nonmedi["Total Variable Cost"] - (total_nonmedi_expense / len(df_nonmedi))
 
     st.subheader("📋 MediHive Scenario")
-    st.dataframe(df_medi, use_container_width=True)
+    st.dataframe(df_medi.fillna(0), use_container_width=True)
     total_medi_asp = df_medi["6M ASP Total"].sum()
     total_medi_awp = df_medi["6M AWP Total"].sum()
     share_asp = df_medi["MediHive ASP Share"].sum()
@@ -69,8 +69,8 @@ if uploaded_file is not None:
 
     st.markdown(f"**Total ASP Revenue:** ${revenue_medi_asp:,.2f}")
     st.markdown(f"**Total ASP Profit:** ${total_medi_asp:,.2f} → Profit %: {(total_medi_asp / revenue_medi_asp * 100):.2f}%")
-    st.markdown(f"** ASP 20% ({medihive_share_percent:.0f}%):** ${share_asp:,.2f}")
-    st.markdown(f"**Net ASP Profit:** ${net_medi_asp:,.2f}")
+    st.markdown(f"**MediHive ASP Share ({medihive_share_percent:.0f}%):** ${share_asp:,.2f}")
+    st.markdown(f"**Net MediHive ASP Profit:** ${net_medi_asp:,.2f}")
 
     st.markdown("---")
 
@@ -80,7 +80,7 @@ if uploaded_file is not None:
     st.markdown(f"**Net MediHive AWP Profit:** ${net_medi_awp:,.2f}")
 
     st.subheader("📋 Non-MediHive Scenario")
-    st.dataframe(df_nonmedi, use_container_width=True)
+    st.dataframe(df_nonmedi.fillna(0), use_container_width=True)
     total_nonmedi_asp = df_nonmedi["6M ASP Total"].sum()
     total_nonmedi_awp = df_nonmedi["6M AWP Total"].sum()
     revenue_nonmedi_asp = df["ASP Revenue"].sum()
