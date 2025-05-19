@@ -85,12 +85,11 @@ psao_cost = st.sidebar.number_input("PSAO (6m)", 0.0, 1e5, 2500.0, 100.0)
 staff_cost = (ph_cnt*ph_rate + tech_cnt*tech_rate) * FTE_HOURS_6M + emr_cost + psao_cost
 
 # -----------------------------------
-# Variable costs (apply to total volume)
-# Total volume in code UOM (e.g., mg) = Dose_MG * Rx Count
-vol = df['Dose_MG'] * df['Rx Count']
-df['Courier Cost'] = vol * courier_rate
-df['Misc Cost'] = vol * misc_rate
-df['Var Cost'] = df['Courier Cost'] + df['Misc Cost']
+# Variable costs (applied to total Rx Count)
+total_rxs = df['Rx Count'].sum()
+total_courier = total_rxs * courier_rate
+total_misc = total_rxs * misc_rate
+total_var_cost = total_courier + total_misc
 
 # MediHive scenario table
 medi = df.copy()
