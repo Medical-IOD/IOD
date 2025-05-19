@@ -43,9 +43,8 @@ def prepare_data(df):
     ]
     for col in dollar_cols:
         if col in df.columns:
-            df[col] = pd.to_numeric(
-                df[col].astype(str).str.replace(r"[^0-9.\-]", "", regex=True).str.replace("--", "-"), errors="coerce"
-            ).fillna(0)
+            df[col] = df[col].astype(str).str.replace(r"[\$,]", "", regex=True).str.strip()
+            df[col] = pd.to_numeric(df[col], errors="coerce")
         else:
             st.warning(f"Missing required column: {col}. Filling with zeros.")
             df[col] = 0.0
@@ -69,8 +68,8 @@ def prepare_data(df):
 
 # --- FILTER PROFITABLE ---
 def filter_profitable(df):
-    asp = pd.to_numeric(df["ASP Profit/Loss"], errors="coerce").fillna(0)
-    awp = pd.to_numeric(df["AWP Profit/Loss"], errors="coerce").fillna(0)
+    asp = pd.to_numeric(df["ASP Profit/Loss"], errors="coerce")
+    awp = pd.to_numeric(df["AWP Profit/Loss"], errors="coerce")
     return df[(asp > 0) | (awp > 0)] if show_only_profitable else df
 
 # --- MAIN ---
