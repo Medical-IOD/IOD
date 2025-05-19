@@ -89,8 +89,8 @@ staff_cost = (ph_cnt*ph_rate + tech_cnt*tech_rate) * FTE_HOURS_6M + emr_cost + p
 # Total volume in code UOM (e.g., mg) = Dose_MG * Rx Count
 vol = df['Dose_MG'] * df['Rx Count']
 df['Courier Cost'] = vol * courier_rate
- df['Misc Cost'] = vol * misc_rate
- df['Var Cost'] = df['Courier Cost'] + df['Misc Cost']
+df['Misc Cost'] = vol * misc_rate
+df['Var Cost'] = df['Courier Cost'] + df['Misc Cost']
 
 # MediHive scenario table
 medi = df.copy()
