@@ -36,14 +36,16 @@ psao_fee = st.sidebar.number_input("PSAO Monthly Fee ($)", value=300.0)
 def prepare_data(df):
     df = df.copy()
 
-    # Strip dollar signs and convert to numeric for currency columns
+    # Strip currency symbols and convert to numeric
     dollar_cols = [
         "ASP Profit/Loss", "AWP Profit/Loss", "NDC Purchase Price",
         "Purchase Price Per Code UOM", "CMS Payment Limit Profit/Loss"
     ]
     for col in dollar_cols:
         if col in df.columns:
-            df[col] = df[col].replace('[\$,]', '', regex=True).astype(float)
+            df[col] = pd.to_numeric(
+                df[col].astype(str).str.replace(r"[^0-9.\-]", "", regex=True), errors="coerce"
+            ).fillna(0)
         else:
             st.warning(f"Missing required column: {col}. Filling with zeros.")
             df[col] = 0.0
@@ -77,20 +79,15 @@ if uploaded_file:
     courier_total = courier_cost_per_rx * vol
     misc_total = misc_cost_per_rx * vol
 
-    pharm_total = pharm_rate * 40 * 4 * 6 * pharm_count  # 6 months full-time
+    pharm_total = pharm_rate * 40 * 4 * 6 * pharm_count
     tech_total = tech_rate * 40 * 4 * 6 * tech_count
     emr_total = emr_cost * 6
     psao_total = psao_fee * 6
-
     nonmedi_expense_total = pharm_total + tech_total + emr_total + psao_total
 
-    df_medi = df.copy()
-    df_non = df.copy()
+    df_medi = filter_profitable(df.copy())
+    df_non = filter_profitable(df.copy())
 
-    df_medi = filter_profitable(df_medi)
-    df_non = filter_profitable(df_non)
-
-    # MEDIHIVE SCENARIO
     asp_total_medi = df_medi["ASP All Dispense"].sum()
     awp_total_medi = df_medi["AWP All Dispense"].sum()
     asp_profit_medi = asp_total_medi - (courier_total + misc_total)
@@ -99,13 +96,11 @@ if uploaded_file:
     awp_share = awp_profit_medi * (medihive_share_pct / 100)
     awp_net = awp_profit_medi - awp_share
 
-    # NON-MEDIHIVE SCENARIO
     asp_total_non = df_non["ASP All Dispense"].sum()
     awp_total_non = df_non["AWP All Dispense"].sum()
     asp_profit_non = asp_total_non - (courier_total + misc_total + nonmedi_expense_total)
     awp_profit_non = awp_total_non - (courier_total + misc_total + nonmedi_expense_total)
 
-    # --- DISPLAY TABLES ---
     st.markdown("### MediHiveRx Scenario")
     st.data_editor(df_medi, use_container_width=True, key="medi_table", num_rows="dynamic")
 
@@ -130,8 +125,6 @@ if uploaded_file:
     st.write(f"**Total AWP Net:** ${awp_profit_non:,.2f}")
 
     st.markdown("---")
-
-    # --- HYPOTHETICAL CALCULATOR ---
     st.markdown("### Hypothetical Target Calculator")
     col1, col2 = st.columns(2)
     with col1:
@@ -141,6 +134,5 @@ if uploaded_file:
 
     target_profit = target_rev * (target_margin_pct / 100)
     st.success(f"**Target Profit = ${target_profit:,.2f}** from ${target_rev:,.2f} in Revenue at {target_margin_pct:.1f}% margin")
-
 else:
     st.info("Please upload a data file to begin.")
