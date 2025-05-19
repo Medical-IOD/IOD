@@ -27,26 +27,6 @@ if uploaded_file:
     st.session_state.medi_data = df.copy()
     st.session_state.nonmedi_data = df.copy()
 
-# --- CONTROL PANEL ---
-with st.container():
-    st.subheader("MediHive Scenario")
-    col1, col2 = st.columns([1, 1])
-    with col1:
-        if st.button("Save All Changes", type="primary"):
-            st.session_state.original_data = st.session_state.medi_data.copy()
-    with col2:
-        if st.button("Reset to Original Upload"):
-            st.session_state.medi_data = st.session_state.original_data.copy()
-            st.session_state.nonmedi_data = st.session_state.original_data.copy()
-
-# --- FILTER TOGGLE ---
-st.subheader("Finalized Tables")
-st.markdown("Use the toggle to filter for profitable drugs only. Tables are editable. Add rows as needed.")
-colA, colB = st.columns([8, 1])
-with colB:
-    toggle = st.checkbox("Only show profitable drugs", value=st.session_state.profit_only)
-    st.session_state.profit_only = toggle
-
 # --- PROFIT FILTER FUNCTION ---
 def filter_profitable(df):
     if st.session_state.profit_only:
@@ -61,27 +41,25 @@ def filter_profitable(df):
         else:
             st.warning("Profit columns not found. Showing all data.")
             return df
-    return df[(asp > 0) | (awp > 0)]
-            except Exception as e:
-                st.warning("Error filtering profitable drugs: " + str(e))
-                return df
-        else:
-            st.warning("Profit columns not found. Showing all data.")
-            return df
-    return df[(asp > 0) | (awp > 0)]
-        except Exception as e:
-            st.warning("Error filtering profitable drugs: " + str(e))
-            return df
-        else:
-            st.warning("Profit columns not found. Showing all data.")
-            return df
-    try:
-        asp = pd.to_numeric(df["ASP Profit/Loss"], errors="coerce")
-        awp = pd.to_numeric(df["AWP Profit/Loss"], errors="coerce")
-        return df[(asp > 0) | (awp > 0)]
-    except Exception as e:
-        st.warning("Error filtering profitable drugs: " + str(e))
-        return df if st.session_state.profit_only else df
+    return df
+
+# --- CONTROL PANEL ---
+with st.container():
+    st.subheader("MediHive Scenario")
+    col1, col2 = st.columns([1, 1])
+    with col1:
+        if st.button("Save All Changes", type="primary"):
+            st.session_state.original_data = st.session_state.medi_data.copy()
+    with col2:
+        if st.button("Reset to Original Upload"):
+            st.session_state.medi_data = st.session_state.original_data.copy()
+            st.session_state.nonmedi_data = st.session_state.original_data.copy()
+
+# --- TOGGLE ---
+colA, colB = st.columns([8, 1])
+with colB:
+    toggle = st.checkbox("Only show profitable drugs", value=st.session_state.profit_only)
+    st.session_state.profit_only = toggle
 
 # --- MEDIHIVE TABLE ---
 st.markdown("### MediHive Scenario")
