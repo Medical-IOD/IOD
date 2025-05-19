@@ -61,7 +61,13 @@ def filter_profitable(df):
         else:
             st.warning("Profit columns not found. Showing all data.")
             return df
-    return df[(df["ASP Profit/Loss"] > 0) | (df["AWP Profit/Loss"] > 0)] if st.session_state.profit_only else df
+    try:
+        asp = pd.to_numeric(df["ASP Profit/Loss"], errors="coerce")
+        awp = pd.to_numeric(df["AWP Profit/Loss"], errors="coerce")
+        return df[(asp > 0) | (awp > 0)]
+    except Exception as e:
+        st.warning("Error filtering profitable drugs: " + str(e))
+        return df if st.session_state.profit_only else df
 
 # --- MEDIHIVE TABLE ---
 st.markdown("### MediHive Scenario")
