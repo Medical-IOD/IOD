@@ -105,6 +105,32 @@ non["AWP Profit (6m)"] = non["AWP All Dispense"] - total_var_cost - staff_cost/l
 # -----------------------------------
 # Display tables
 
+# Profit filter toggle
+st.sidebar.markdown("---")
+show_profitable_only = st.sidebar.checkbox("Only include profitable drugs in totals", value=True)
+
+# Apply filter
+if show_profitable_only:
+    filter_mask = (df["ASP All Dispense"] - total_var_cost > 0) | (df["AWP All Dispense"] - total_var_cost > 0)
+    df = df[filter_mask].reset_index(drop=True)
+
+# Recompute scenario tables on filtered data
+medi = df.copy()
+medi["ASP Profit (6m)"] = medi["ASP All Dispense"] - total_var_cost
+medi["AWP Profit (6m)"] = medi["AWP All Dispense"] - total_var_cost
+medi["MediHive Share AWP"] = medi["AWP Profit (6m)"] * (share_pct / 100)
+
+non = df.copy()
+non["ASP Profit (6m)"] = non["ASP All Dispense"] - total_var_cost - staff_cost/len(non)
+non["AWP Profit (6m)"] = non["AWP All Dispense"] - total_var_cost - staff_cost/len(non)
+
+# Editable data tables
+st.subheader("🔢 MediHive Scenario")
+st.data_editor(medi, use_container_width=True, key="medi_editor", num_rows="dynamic")
+
+st.subheader("🔢 Non-MediHive Scenario")
+st.data_editor(non, use_container_width=True, key="non_editor", num_rows="dynamic")
+
 # Debug table for ASP profitability
 st.subheader("🔢 ASP Profit Debug Table")
 with st.expander("Show Per-Drug Profit Breakdown"):
