@@ -20,9 +20,8 @@ if uploaded_file is not None:
     df["Strength"] = df["Strength"].astype(str)
     df["Dose_MG"] = df["Strength"].str.extract(r"([\d,.]+)").replace(",", "", regex=True).astype(float)
     df["Rx Count"] = pd.to_numeric(df["Rx Count"], errors="coerce")
-
-    # Compute ASP and AWP reimbursement assumptions
     df["Purchase Price Per Code UOM"] = pd.to_numeric(df["Purchase Price Per Code UOM"], errors="coerce")
+
     df["ASP Reimbursement"] = df["Purchase Price Per Code UOM"] * 1.04
     df["AWP Reimbursement"] = df["Purchase Price Per Code UOM"] * 0.81
     df["ASP Profit/Loss"] = df["ASP Reimbursement"] - df["Purchase Price Per Code UOM"]
@@ -33,62 +32,47 @@ if uploaded_file is not None:
     misc_expense = st.sidebar.number_input("Misc. Supply Cost per Rx (Boxes, Bags, Insulation)", min_value=0.0, value=2.0, step=0.5)
 
     st.sidebar.title("🏥 Non-MediHiveRx Factors")
-    pharmacist_cost = st.sidebar.number_input("Pharmacist Labor Cost (6 months)", min_value=0.0, value=20000.0, step=500.0)
-    technician_cost = st.sidebar.number_input("Technician Labor Cost (6 months)", min_value=0.0, value=15000.0, step=500.0)
-    emr_cost = st.sidebar.number_input("EMR Cost (6 months)", min_value=0.0, value=3000.0, step=100.0)
-    psao_cost = st.sidebar.number_input("PSAO Cost (6 months)", min_value=0.0, value=2500.0, step=100.0)
+    pharmacist_cost = st.sidebar.number_input("Pharmacist Labor Cost (6 months)", min_value=0.0, step=500.0)
+    technician_cost = st.sidebar.number_input("Technician Labor Cost (6 months)", min_value=0.0, step=500.0)
+    emr_cost = st.sidebar.number_input("EMR Cost (6 months)", min_value=0.0, step=100.0)
+    psao_cost = st.sidebar.number_input("PSAO Cost (6 months)", min_value=0.0, step=100.0)
 
-    editable_df = st.data_editor(
-        df[["Drug Name", "NDC", "HCPCS", "Strength", "Dose_MG", "Rx Count", "ASP Profit/Loss", "AWP Profit/Loss"]],
-        use_container_width=True,
-        num_rows="dynamic",
-        key="editable_inputs"
-    )
+    editable_df = st.data_editor(df, use_container_width=True, num_rows="dynamic", key="main_table")
 
     editable_df["ASP per Rx"] = editable_df["Dose_MG"] * editable_df["ASP Profit/Loss"]
     editable_df["AWP per Rx"] = editable_df["Dose_MG"] * editable_df["AWP Profit/Loss"]
     editable_df["ASP All Dispense"] = editable_df["ASP per Rx"] * editable_df["Rx Count"]
     editable_df["AWP All Dispense"] = editable_df["AWP per Rx"] * editable_df["Rx Count"]
-
     editable_df["Courier Cost"] = editable_df["Rx Count"] * courier_rate
     editable_df["Misc Cost"] = editable_df["Rx Count"] * misc_expense
     editable_df["Total Variable Cost"] = editable_df["Courier Cost"] + editable_df["Misc Cost"]
-
     editable_df["6M ASP Total"] = editable_df["ASP All Dispense"] - editable_df["Total Variable Cost"]
     editable_df["6M AWP Total"] = editable_df["AWP All Dispense"] - editable_df["Total Variable Cost"]
 
-    st.subheader("📋 Editable Profit Table")
+    st.subheader("📋 Profitability Table (Editable)")
     st.dataframe(editable_df, use_container_width=True)
 
-    total_asp = editable_df["6M ASP Total"].sum()
-    total_awp = editable_df["6M AWP Total"].sum()
+    # Base: MediHive share summary (20% of net)
+    base_asp = editable_df["6M ASP Total"].sum()
+    base_awp = editable_df["6M AWP Total"].sum()
+    medihive_asp = base_asp * 0.20
+    medihive_awp = base_awp * 0.20
 
-    dispenser_share_asp = total_asp * 0.80
-    medihive_share_asp = total_asp * 0.20
+    # With Non-MediHiveRx factors
+    other_total_costs = pharmacist_cost + technician_cost + emr_cost + psao_cost
+    alt_asp = base_asp - other_total_costs
+    alt_awp = base_awp - other_total_costs
 
-    dispenser_share_awp = total_awp * 0.80
-    medihive_share_awp = total_awp * 0.20
-
-    st.subheader("📈 MediHive Scenario Summary")
+    st.subheader("📈 Scenario Comparison")
     col1, col2 = st.columns(2)
     with col1:
-        st.metric("6M ASP Net Profit (After All Costs)", f"${total_asp:,.2f}")
-        st.metric("MediHive Share (20% ASP)", f"${medihive_share_asp:,.2f}")
+        st.metric("MediHive 6M ASP Profit", f"${base_asp:,.2f}")
+        st.metric("MediHive Share (20%)", f"${medihive_asp:,.2f}")
+        st.metric("MediHive 6M AWP Profit", f"${base_awp:,.2f}")
+        st.metric("MediHive Share (20%)", f"${medihive_awp:,.2f}")
     with col2:
-        st.metric("6M AWP Net Profit (After All Costs)", f"${total_awp:,.2f}")
-        st.metric("MediHive Share (20% AWP)", f"${medihive_share_awp:,.2f}")
-
-    st.subheader("🧾 Non-MediHive Cost Comparison")
-    total_other_expense = pharmacist_cost + technician_cost + emr_cost + psao_cost
-    st.write("""
-    | Category         | Cost ($)       |
-    |------------------|----------------|
-    | Pharmacist       | ${:,.2f}        |
-    | Technician       | ${:,.2f}        |
-    | EMR              | ${:,.2f}        |
-    | PSAO             | ${:,.2f}        |
-    | **Total**        | **${:,.2f}**    |
-    """.format(pharmacist_cost, technician_cost, emr_cost, psao_cost, total_other_expense))
+        st.metric("Non-MediHive ASP Profit (after labor)", f"${alt_asp:,.2f}")
+        st.metric("Non-MediHive AWP Profit (after labor)", f"${alt_awp:,.2f}")
 
     st.subheader("📘 Calculation Explanations")
     st.markdown("""
@@ -98,12 +82,13 @@ if uploaded_file is not None:
     - **AWP per Rx** = Dose × AWP Profit/Loss  
     - **ASP All Dispense** = ASP per Rx × Rx Count  
     - **AWP All Dispense** = AWP per Rx × Rx Count  
-    - **Courier Cost** = Rx Count × Courier Rate ($8 default)  
-    - **Misc Cost** = Rx Count × Miscellaneous Supply Cost ($2 default)  
+    - **Courier Cost** = Rx Count × Courier Rate  
+    - **Misc Cost** = Rx Count × Miscellaneous Supply Cost  
     - **Total Variable Cost** = Courier Cost + Misc Cost  
     - **6M ASP Total** = ASP All Dispense − Total Variable Cost  
     - **6M AWP Total** = AWP All Dispense − Total Variable Cost  
     - **MediHive Share** = 20% of ASP or AWP Net Profit  
+    - **Non-MediHive Total** = 6M Net Profit − (Pharmacist + Technician + EMR + PSAO Costs)  
     """)
 
 else:
