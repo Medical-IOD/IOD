@@ -35,7 +35,11 @@ psao_fee = st.sidebar.number_input("PSAO Monthly Fee ($)", value=300.0)
 # --- DATA PROCESSING ---
 def prepare_data(df):
     df = df.copy()
-    for col in ["ASP Profit/Loss", "AWP Profit/Loss", "Dose_MG", "Rx Count"]:
+    required_cols = ["ASP Profit/Loss", "AWP Profit/Loss", "Dose_MG", "Rx Count"]
+    for col in required_cols:
+        if col not in df.columns:
+            st.warning(f"Missing required column: {col}. Filling with zeros.")
+            df[col] = 0
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
 
     df["ASP per Rx"] = df["Dose_MG"] * df["ASP Profit/Loss"]
