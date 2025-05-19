@@ -49,6 +49,12 @@ with colB:
 
 # --- PROFIT FILTER FUNCTION ---
 def filter_profitable(df):
+    if st.session_state.profit_only:
+        if "ASP Profit/Loss" in df.columns and "AWP Profit/Loss" in df.columns:
+            return df[(df["ASP Profit/Loss"] > 0) | (df["AWP Profit/Loss"] > 0)]
+        else:
+            st.warning("Profit columns not found. Showing all data.")
+            return df
     return df[(df["ASP Profit/Loss"] > 0) | (df["AWP Profit/Loss"] > 0)] if st.session_state.profit_only else df
 
 # --- MEDIHIVE TABLE ---
