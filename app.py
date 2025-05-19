@@ -23,32 +23,41 @@ if uploaded_file is not None:
     df["AWP Profit/Loss"] = pd.to_numeric(df["AWP Profit/Loss"].astype(str).str.replace("[$,()]", "", regex=True).str.replace(")", "-"), errors="coerce")
     df["Rx Count"] = pd.to_numeric(df["Rx Count"], errors="coerce")
 
-    df["ASP per Rx"] = df["Dose_MG"] * df["ASP Profit/Loss"]
-    df["AWP per Rx"] = df["Dose_MG"] * df["AWP Profit/Loss"]
-    df["ASP All Dispense"] = df["ASP per Rx"] * df["Rx Count"]
-    df["AWP All Dispense"] = df["AWP per Rx"] * df["Rx Count"]
-
     st.sidebar.title("🔧 Adjust Inputs")
     courier_rate = st.sidebar.number_input("Courier Cost per Rx", min_value=0.0, value=8.0, step=0.5)
     misc_expense = st.sidebar.number_input("Misc. Supply Cost per Rx (Boxes, Bags, Insulation)", min_value=0.0, value=2.0, step=0.5)
+    pharmacist_cost = st.sidebar.number_input("Pharmacist Labor Cost (6 months)", min_value=0.0, value=20000.0, step=500.0)
+    technician_cost = st.sidebar.number_input("Technician Labor Cost (6 months)", min_value=0.0, value=15000.0, step=500.0)
+    emr_cost = st.sidebar.number_input("EMR Cost (6 months)", min_value=0.0, value=3000.0, step=100.0)
+    psao_cost = st.sidebar.number_input("PSAO Cost (6 months)", min_value=0.0, value=2500.0, step=100.0)
 
-    df["Courier Cost"] = df["Rx Count"] * courier_rate
-    df["Misc Cost"] = df["Rx Count"] * misc_expense
-    df["Total Variable Cost"] = df["Courier Cost"] + df["Misc Cost"]
+    df["ASP per Rx"] = df["Dose_MG"] * df["ASP Profit/Loss"]
+    df["AWP per Rx"] = df["Dose_MG"] * df["AWP Profit/Loss"]
 
-    df["6M ASP Total"] = df["ASP All Dispense"] - df["Total Variable Cost"]
-    df["6M AWP Total"] = df["AWP All Dispense"] - df["Total Variable Cost"]
-
-    st.subheader("📋 Editable Profit Table")
-    edited_df = st.data_editor(
-        df[["Drug Name", "NDC", "HCPCS", "Strength", "Package Size", "Rx Count", "Package Quantity", "NDC Purchase Price", "Vendor Name", "Code UOM", "Purchase Price Per Code UOM", "CMS Payment Limit Profit/Loss", "ASP Profit/Loss", "AWP Profit/Loss", "Courier Cost", "Misc Cost", "Total Variable Cost", "ASP per Rx", "AWP per Rx", "ASP All Dispense", "AWP All Dispense", "6M ASP Total", "6M AWP Total"]],
+    editable_df = st.data_editor(
+        df[["Drug Name", "NDC", "HCPCS", "Strength", "Rx Count", "ASP Profit/Loss", "AWP Profit/Loss"]],
         use_container_width=True,
         num_rows="dynamic",
-        key="editor"
+        key="editable_inputs"
     )
 
-    total_asp = edited_df["6M ASP Total"].sum()
-    total_awp = edited_df["6M AWP Total"].sum()
+    editable_df["ASP per Rx"] = editable_df["Dose_MG"] * editable_df["ASP Profit/Loss"]
+    editable_df["AWP per Rx"] = editable_df["Dose_MG"] * editable_df["AWP Profit/Loss"]
+    editable_df["ASP All Dispense"] = editable_df["ASP per Rx"] * editable_df["Rx Count"]
+    editable_df["AWP All Dispense"] = editable_df["AWP per Rx"] * editable_df["Rx Count"]
+
+    editable_df["Courier Cost"] = editable_df["Rx Count"] * courier_rate
+    editable_df["Misc Cost"] = editable_df["Rx Count"] * misc_expense
+    editable_df["Total Variable Cost"] = editable_df["Courier Cost"] + editable_df["Misc Cost"]
+
+    editable_df["6M ASP Total"] = editable_df["ASP All Dispense"] - editable_df["Total Variable Cost"]
+    editable_df["6M AWP Total"] = editable_df["AWP All Dispense"] - editable_df["Total Variable Cost"]
+
+    st.subheader("📋 Editable Profit Table")
+    st.dataframe(editable_df, use_container_width=True)
+
+    total_asp = editable_df["6M ASP Total"].sum()
+    total_awp = editable_df["6M AWP Total"].sum()
 
     dispenser_share_asp = total_asp * 0.80
     medihive_share_asp = total_asp * 0.20
@@ -56,19 +65,32 @@ if uploaded_file is not None:
     dispenser_share_awp = total_awp * 0.80
     medihive_share_awp = total_awp * 0.20
 
-    st.subheader("📈 Summary")
+    st.subheader("📈 MediHive Scenario Summary")
     col1, col2 = st.columns(2)
     with col1:
         st.metric("6M ASP Net Profit (After All Costs)", f"${total_asp:,.2f}")
-        st.metric("Part B (20% ASP)", f"${medihive_share_asp:,.2f}")
+        st.metric("MediHive Share (20% ASP)", f"${medihive_share_asp:,.2f}")
     with col2:
         st.metric("6M AWP Net Profit (After All Costs)", f"${total_awp:,.2f}")
         st.metric("MediHive Share (20% AWP)", f"${medihive_share_awp:,.2f}")
 
+    st.subheader("🧾 Non-MediHive Cost Comparison")
+    total_other_expense = pharmacist_cost + technician_cost + emr_cost + psao_cost
+    st.write("""
+    | Category         | Cost ($)       |
+    |------------------|----------------|
+    | Pharmacist       | ${:,.2f}        |
+    | Technician       | ${:,.2f}        |
+    | EMR              | ${:,.2f}        |
+    | PSAO             | ${:,.2f}        |
+    | **Total**        | **${:,.2f}**    |
+    """.format(pharmacist_cost, technician_cost, emr_cost, psao_cost, total_other_expense))
+
     st.markdown("""
     ---
-    **Note:** This pro forma reflects total 6-month profitability, including supply and delivery costs.
-    MediHive earns 20% of the net total to support staffing, compliance, and technology.
+    **Note:** You can now compare MediHive's flat 20% service cost vs. traditional in-house cost categories.
+    Adjust Rx counts, courier rate, or ASP values directly above to model various scenarios.
     """)
+
 else:
     st.warning("Please upload the profitability Excel file to proceed.")
