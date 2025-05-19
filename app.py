@@ -104,6 +104,24 @@ non["AWP Profit (6m)"] = non["AWP All Dispense"] - total_var_cost - staff_cost/l
 
 # -----------------------------------
 # Display tables
+
+# Debug table for ASP profitability
+st.subheader("🔢 ASP Profit Debug Table")
+with st.expander("Show Per-Drug Profit Breakdown"):
+    debug_df = pd.DataFrame({
+        "Drug": df["Drug Name"],
+        "Dose_MG": df["Dose_MG"],
+        "Rx Count": df["Rx Count"],
+        "ASP Profit/Loss (UOM)": df["ASP Profit/Loss"],
+        "ASP per Rx": df["ASP per Rx"],
+        "ASP All Dispense": df["ASP All Dispense"],
+        "Total Var Cost": df["Rx Count"] * (courier_rate + misc_rate),
+        "ASP Final Profit": df["ASP All Dispense"] - (df["Rx Count"] * (courier_rate + misc_rate))
+    })
+    show_profitable_only = st.checkbox("Show only profitable drugs", value=True)
+    if show_profitable_only:
+        debug_df = debug_df[debug_df["ASP Final Profit"] > 0]
+    st.dataframe(debug_df, use_container_width=True)
 # -----------------------------------
 st.subheader("📊 MediHive Scenario")
 st.dataframe(medi, use_container_width=True)
