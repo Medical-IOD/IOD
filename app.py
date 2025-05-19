@@ -26,6 +26,9 @@ if uploaded_file is not None:
     df["AWP per Rx"] = df["Dose_MG"] * df["AWP Profit/Loss"]
     df["ASP All Dispense"] = df["ASP per Rx"] * df["Rx Count"]
     df["AWP All Dispense"] = df["AWP per Rx"] * df["Rx Count"]
+    df["Total COGS"] = df["Purchase Price Per Code UOM"] * df["Dose_MG"] * df["Rx Count"]
+    df["ASP Revenue"] = df["Total COGS"] + df["ASP All Dispense"]
+    df["AWP Revenue"] = df["Total COGS"] + df["AWP All Dispense"]
 
     st.sidebar.title("🔧 Adjust Inputs")
     courier_rate = st.sidebar.number_input("Courier Cost per Rx", min_value=0.0, value=8.0, step=0.5)
@@ -61,27 +64,45 @@ if uploaded_file is not None:
     share_awp = df_medi["MediHive AWP Share"].sum()
     net_medi_asp = total_medi_asp - share_asp
     net_medi_awp = total_medi_awp - share_awp
+    revenue_medi_asp = df_medi["ASP Revenue"].sum()
+    revenue_medi_awp = df_medi["AWP Revenue"].sum()
 
-    st.markdown(f"**Total ASP Profit:** ${total_medi_asp:,.2f}")
-    st.markdown(f"**Total AWP Profit:** ${total_medi_awp:,.2f}")
-    st.markdown(f"**MediHive ASP Share ({medihive_share_percent:.0f}%):** ${share_asp:,.2f}")
+    st.markdown(f"**Total ASP Revenue:** ${revenue_medi_asp:,.2f}")
+    st.markdown(f"**Total ASP Profit:** ${total_medi_asp:,.2f} → Profit %: {(total_medi_asp / revenue_medi_asp * 100):.2f}%")
+    st.markdown(f"** ASP 20% ({medihive_share_percent:.0f}%):** ${share_asp:,.2f}")
+    st.markdown(f"**Net ASP Profit:** ${net_medi_asp:,.2f}")
+
+    st.markdown("---")
+
+    st.markdown(f"**Total AWP Revenue:** ${revenue_medi_awp:,.2f}")
+    st.markdown(f"**Total AWP Profit:** ${total_medi_awp:,.2f} → Profit %: {(total_medi_awp / revenue_medi_awp * 100):.2f}%")
     st.markdown(f"**MediHive AWP Share ({medihive_share_percent:.0f}%):** ${share_awp:,.2f}")
-    st.markdown(f"**Net MediHive ASP Profit (after share):** ${net_medi_asp:,.2f}")
-    st.markdown(f"**Net MediHive AWP Profit (after share):** ${net_medi_awp:,.2f}")
+    st.markdown(f"**Net MediHive AWP Profit:** ${net_medi_awp:,.2f}")
 
     st.subheader("📋 Non-MediHive Scenario")
     st.dataframe(df_nonmedi, use_container_width=True)
     total_nonmedi_asp = df_nonmedi["6M ASP Total"].sum()
     total_nonmedi_awp = df_nonmedi["6M AWP Total"].sum()
+    revenue_nonmedi_asp = df["ASP Revenue"].sum()
+    revenue_nonmedi_awp = df["AWP Revenue"].sum()
 
-    net_nonmedi_asp = total_nonmedi_asp
-    net_nonmedi_awp = total_nonmedi_awp
-
-    st.markdown(f"**Total ASP Profit:** ${total_nonmedi_asp:,.2f}")
-    st.markdown(f"**Total AWP Profit:** ${total_nonmedi_awp:,.2f}")
+    st.markdown(f"**Total ASP Revenue:** ${revenue_nonmedi_asp:,.2f}")
+    st.markdown(f"**Total ASP Profit:** ${total_nonmedi_asp:,.2f} → Profit %: {(total_nonmedi_asp / revenue_nonmedi_asp * 100):.2f}%")
     st.markdown(f"**Non-MediHive Total Expenses (6M):** ${total_nonmedi_expense:,.2f}")
-    st.markdown(f"**Net Non-MediHive ASP Profit (after expenses):** ${net_nonmedi_asp:,.2f}")
-    st.markdown(f"**Net Non-MediHive AWP Profit (after expenses):** ${net_nonmedi_awp:,.2f}")
+
+    st.markdown("---")
+
+    st.markdown(f"**Total AWP Revenue:** ${revenue_nonmedi_awp:,.2f}")
+    st.markdown(f"**Total AWP Profit:** ${total_nonmedi_awp:,.2f} → Profit %: {(total_nonmedi_awp / revenue_nonmedi_awp * 100):.2f}%")
+    st.markdown(f"**Non-MediHive Total Expenses (6M):** ${total_nonmedi_expense:,.2f}")
+
+    st.subheader("📊 Hypothetical Revenue & Profit Simulator")
+    with st.expander("Try Your Own Revenue + Margin Goals"):
+        hypo_revenue = st.number_input("Enter Target Total Revenue ($)", min_value=0.0, step=1000.0)
+        hypo_profit = st.number_input("Enter Target Net Profit ($)", min_value=0.0, step=100.0)
+        if hypo_revenue > 0 and hypo_profit > 0:
+            hypo_margin = (hypo_profit / hypo_revenue) * 100
+            st.success(f"To achieve ${hypo_profit:,.2f} profit from ${hypo_revenue:,.2f} revenue, you need a margin of {hypo_margin:.2f}%")
 
     st.subheader("📘 Calculation Explanations")
     st.markdown("""
@@ -90,12 +111,14 @@ if uploaded_file is not None:
     - **AWP per Rx** = Total Unit of Measure × AWP Profit/Loss  
     - **ASP All Dispense** = ASP per Rx × Rx Count  
     - **AWP All Dispense** = AWP per Rx × Rx Count  
+    - **COGS** = Purchase Price × Unit × Rx Count  
+    - **Revenue** = COGS + Profit (for both ASP and AWP)  
+    - **Profit %** = Profit ÷ Revenue  
     - **Courier Cost** = Rx Count × Courier Rate  
     - **Misc Cost** = Rx Count × Misc Supply Cost  
     - **Total Variable Cost** = Courier + Misc  
     - **MediHive Share** = MediHive % × ASP or AWP Profit (after variable costs)  
-    - **Net MediHive ASP/AWP** = Profit − MediHive Share  
-    - **Net Non-MediHive ASP/AWP** = Profit − (Pharmacist + Tech + EMR + PSAO)  
+    - **Non-MediHive Cost** = Pharmacist + Tech + EMR + PSAO  
     """)
 
 else:
