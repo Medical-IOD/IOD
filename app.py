@@ -128,6 +128,8 @@ non["AWP Profit (6m)"] = non["AWP All Dispense"] - total_var_cost - staff_cost/l
 st.subheader("🔢 MediHive Scenario")
 col1, col2 = st.columns([3, 1])
 with col2:
+    col_filter1, col_filter2 = st.columns([3, 1])
+with col_filter2:
     filter_toggle = st.checkbox("Only show profitable drugs", value=True, key="profitable_toggle_main")
 
 if filter_toggle:
@@ -188,7 +190,12 @@ Use the toggle to filter for profitable drugs only. Tables are editable. Add row
 
 col1, col2 = st.columns([3, 1])
 with col1:
-    st.subheader("MediHive Scenario")
+    st.markdown("""
+    <h1 style='text-align: center; background-color: #002b36; color: white; padding: 20px; border-radius: 8px;'>
+        💊 MediHiveRx In-Office Dispensing Profitability Tool
+    </h1>
+""", unsafe_allow_html=True)
+st.subheader("MediHive Scenario")
 with col2:
     filter_toggle = st.checkbox("Only show profitable drugs", value=True, key="profitable_toggle")
 
