@@ -147,7 +147,7 @@ non["AWP Profit (6m)"] = non["AWP All Dispense"] - total_var_cost - staff_cost/l
 # Display editable scenario tables
 col1.data_editor(medi, use_container_width=True, key="medi_editor", num_rows="dynamic")
 st.subheader("🔢 Non-MediHive Scenario")
-st.data_editor(non, use_container_width=True, key="non_editor", num_rows="dynamic")
+st.data_editor(non, use_container_width=True, key="non_editor_filtered" if filter_toggle else "non_editor_all", num_rows="dynamic")
 
 st.subheader("🔢 Non-MediHive Scenario")
 st.data_editor(non, use_container_width=True, key="non_editor", num_rows="dynamic")
