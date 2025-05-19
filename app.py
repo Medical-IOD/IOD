@@ -55,16 +55,33 @@ if uploaded_file is not None:
 
     st.subheader("📋 MediHive Scenario")
     st.dataframe(df_medi, use_container_width=True)
-    st.markdown(f"**Total ASP Profit:** ${df_medi['6M ASP Total'].sum():,.2f}")
-    st.markdown(f"**Total AWP Profit:** ${df_medi['6M AWP Total'].sum():,.2f}")
-    st.markdown(f"**MediHive ASP Share ({medihive_share_percent:.0f}%):** ${df_medi['MediHive ASP Share'].sum():,.2f}")
-    st.markdown(f"**MediHive AWP Share ({medihive_share_percent:.0f}%):** ${df_medi['MediHive AWP Share'].sum():,.2f}")
+    total_medi_asp = df_medi["6M ASP Total"].sum()
+    total_medi_awp = df_medi["6M AWP Total"].sum()
+    share_asp = df_medi["MediHive ASP Share"].sum()
+    share_awp = df_medi["MediHive AWP Share"].sum()
+    net_medi_asp = total_medi_asp - share_asp
+    net_medi_awp = total_medi_awp - share_awp
+
+    st.markdown(f"**Total ASP Profit:** ${total_medi_asp:,.2f}")
+    st.markdown(f"**Total AWP Profit:** ${total_medi_awp:,.2f}")
+    st.markdown(f"**MediHive ASP Share ({medihive_share_percent:.0f}%):** ${share_asp:,.2f}")
+    st.markdown(f"**MediHive AWP Share ({medihive_share_percent:.0f}%):** ${share_awp:,.2f}")
+    st.markdown(f"**Net MediHive ASP Profit (after share):** ${net_medi_asp:,.2f}")
+    st.markdown(f"**Net MediHive AWP Profit (after share):** ${net_medi_awp:,.2f}")
 
     st.subheader("📋 Non-MediHive Scenario")
     st.dataframe(df_nonmedi, use_container_width=True)
-    st.markdown(f"**Total ASP Profit:** ${df_nonmedi['6M ASP Total'].sum():,.2f}")
-    st.markdown(f"**Total AWP Profit:** ${df_nonmedi['6M AWP Total'].sum():,.2f}")
-    st.markdown(f"**Non-MediHive Total Expenses:** ${total_nonmedi_expense:,.2f}")
+    total_nonmedi_asp = df_nonmedi["6M ASP Total"].sum()
+    total_nonmedi_awp = df_nonmedi["6M AWP Total"].sum()
+
+    net_nonmedi_asp = total_nonmedi_asp
+    net_nonmedi_awp = total_nonmedi_awp
+
+    st.markdown(f"**Total ASP Profit:** ${total_nonmedi_asp:,.2f}")
+    st.markdown(f"**Total AWP Profit:** ${total_nonmedi_awp:,.2f}")
+    st.markdown(f"**Non-MediHive Total Expenses (6M):** ${total_nonmedi_expense:,.2f}")
+    st.markdown(f"**Net Non-MediHive ASP Profit (after expenses):** ${net_nonmedi_asp:,.2f}")
+    st.markdown(f"**Net Non-MediHive AWP Profit (after expenses):** ${net_nonmedi_awp:,.2f}")
 
     st.subheader("📘 Calculation Explanations")
     st.markdown("""
@@ -77,7 +94,8 @@ if uploaded_file is not None:
     - **Misc Cost** = Rx Count × Misc Supply Cost  
     - **Total Variable Cost** = Courier + Misc  
     - **MediHive Share** = MediHive % × ASP or AWP Profit (after variable costs)  
-    - **Non-MediHive Profit** = Total Profit − (Pharmacist + Tech + EMR + PSAO)  
+    - **Net MediHive ASP/AWP** = Profit − MediHive Share  
+    - **Net Non-MediHive ASP/AWP** = Profit − (Pharmacist + Tech + EMR + PSAO)  
     """)
 
 else:
