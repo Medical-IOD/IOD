@@ -36,7 +36,7 @@ psao_fee = st.sidebar.number_input("PSAO Monthly Fee ($)", value=300.0)
 def prepare_data(df):
     df = df.copy()
 
-    # Strip currency symbols and convert to numeric
+    # Strip currency symbols and convert to signed numeric values
     dollar_cols = [
         "ASP Profit/Loss", "AWP Profit/Loss", "NDC Purchase Price",
         "Purchase Price Per Code UOM", "CMS Payment Limit Profit/Loss"
@@ -44,7 +44,7 @@ def prepare_data(df):
     for col in dollar_cols:
         if col in df.columns:
             df[col] = pd.to_numeric(
-                df[col].astype(str).str.replace(r"[^0-9.\-]", "", regex=True), errors="coerce"
+                df[col].astype(str).str.replace(r"[^0-9.\-]", "", regex=True).str.replace("--", "-"), errors="coerce"
             ).fillna(0)
         else:
             st.warning(f"Missing required column: {col}. Filling with zeros.")
