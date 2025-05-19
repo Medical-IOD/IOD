@@ -128,7 +128,7 @@ non["AWP Profit (6m)"] = non["AWP All Dispense"] - total_var_cost - staff_cost/l
 st.subheader("🔢 MediHive Scenario")
 col1, col2 = st.columns([3, 1])
 with col2:
-    filter_toggle = st.checkbox("Only show profitable drugs", value=True, key="profitable_toggle")
+    filter_toggle = st.checkbox("Only show profitable drugs", value=True, key="profitable_toggle_main")
 
 if filter_toggle:
     mask = (df["ASP All Dispense"] - total_var_cost > 0) | (df["AWP All Dispense"] - total_var_cost > 0)
