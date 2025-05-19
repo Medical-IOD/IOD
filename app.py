@@ -35,26 +35,25 @@ psao_fee = st.sidebar.number_input("PSAO Monthly Fee ($)", value=300.0)
 # --- DATA PROCESSING ---
 def prepare_data(df):
     df = df.copy()
-    required_cols = ["ASP Profit/Loss", "AWP Profit/Loss", "Dose_MG", "Rx Count"]
+    required_cols = ["ASP Profit/Loss", "AWP Profit/Loss", "Dose", "Rx Count", "Code UOM"]
     for col in required_cols:
         if col not in df.columns:
             st.warning(f"Missing required column: {col}. Filling with zeros.")
             df[col] = 0
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
 
-    df["ASP per Rx"] = df["Dose_MG"] * df["ASP Profit/Loss"]
-    df["AWP per Rx"] = df["Dose_MG"] * df["AWP Profit/Loss"]
+    safe_uom = df["Code UOM"].replace(0, np.nan)
+    df["ASP per Rx"] = (df["Dose"] / safe_uom) * df["ASP Profit/Loss"]
+    df["AWP per Rx"] = (df["Dose"] / safe_uom) * df["AWP Profit/Loss"]
     df["ASP All Dispense"] = df["ASP per Rx"] * df["Rx Count"]
     df["AWP All Dispense"] = df["AWP per Rx"] * df["Rx Count"]
     return df
 
 # --- FILTER PROFITABLE ---
 def filter_profitable(df):
-    if "ASP Profit/Loss" in df.columns and "AWP Profit/Loss" in df.columns:
-        asp = pd.to_numeric(df["ASP Profit/Loss"], errors="coerce").fillna(0)
-        awp = pd.to_numeric(df["AWP Profit/Loss"], errors="coerce").fillna(0)
-        return df[(asp > 0) | (awp > 0)] if show_only_profitable else df
-    return df
+    asp = pd.to_numeric(df["ASP Profit/Loss"], errors="coerce").fillna(0)
+    awp = pd.to_numeric(df["AWP Profit/Loss"], errors="coerce").fillna(0)
+    return df[(asp > 0) | (awp > 0)] if show_only_profitable else df
 
 # --- MAIN ---
 if uploaded_file:
