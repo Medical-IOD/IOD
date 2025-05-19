@@ -93,9 +93,9 @@ total_var_cost = total_courier + total_misc
 
 # MediHive scenario table
 medi = df.copy()
-medi["ASP Profit (6m)"] = medi["ASP All Dispense"] - medi["Var Cost"]
-medi["AWP Profit (6m)"] = medi["AWP All Dispense"] - medi["Var Cost"]
-medi["MediHive Share AWP"] = medi["AWP Profit (6m)"] * (share_pct/100)
+medi["ASP Profit (6m)"] = medi["ASP All Dispense"] - total_var_cost
+medi["AWP Profit (6m)"] = medi["AWP All Dispense"] - total_var_cost
+medi["MediHive Share AWP"] = medi["AWP Profit (6m)"] * (share_pct / 100)medi["AWP Profit (6m)"] * (share_pct/100)
 
 # Non‑MediHive scenario table
 non = df.copy()
