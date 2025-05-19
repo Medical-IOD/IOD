@@ -145,6 +145,33 @@ non["ASP Profit (6m)"] = non["ASP All Dispense"] - total_var_cost - staff_cost/l
 non["AWP Profit (6m)"] = non["AWP All Dispense"] - total_var_cost - staff_cost/len(non)
 
 # Display editable scenario tables
+
+# Setup column layout with toggle for profitability filter
+col1, col2 = st.columns([3, 1])
+with col1:
+    st.subheader("🔢 MediHive Scenario")
+with col2:
+    filter_toggle = st.checkbox("Only show profitable drugs", value=True)
+
+# Apply filter
+if filter_toggle:
+    mask = (df["ASP All Dispense"] - total_var_cost > 0) | (df["AWP All Dispense"] - total_var_cost > 0)
+    df = df[mask].reset_index(drop=True)
+
+# Recompute scenario tables
+medi = df.copy()
+medi["ASP Profit (6m)"] = medi["ASP All Dispense"] - total_var_cost
+medi["AWP Profit (6m)"] = medi["AWP All Dispense"] - total_var_cost
+medi["MediHive Share AWP"] = medi["AWP Profit (6m)"] * (share_pct / 100)
+
+non = df.copy()
+non["ASP Profit (6m)"] = non["ASP All Dispense"] - total_var_cost - staff_cost/len(non)
+non["AWP Profit (6m)"] = non["AWP All Dispense"] - total_var_cost - staff_cost/len(non)
+
+# Display both scenario tables
+st.data_editor(medi, use_container_width=True, key="medi_editor", num_rows="dynamic")
+st.subheader("🔢 Non-MediHive Scenario")
+st.data_editor(non, use_container_width=True, key="non_editor_filtered" if filter_toggle else "non_editor_all", num_rows="dynamic")
 col1.data_editor(medi, use_container_width=True, key="medi_editor", num_rows="dynamic")
 st.subheader("🔢 Non-MediHive Scenario")
 st.data_editor(non, use_container_width=True, key="non_editor_filtered" if filter_toggle else "non_editor_all", num_rows="dynamic")
