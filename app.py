@@ -18,9 +18,8 @@ if uploaded_file is not None:
     df["Strength"] = df["Strength"].astype(str)
     df["Dose_MG"] = df["Strength"].str.extract(r"([\d,.]+)").replace(",", "", regex=True).astype(float)
     df["Rx Count"] = pd.to_numeric(df["Rx Count"], errors="coerce")
-    df["Purchase Price Per Code UOM"] = pd.to_numeric(df["Purchase Price Per Code UOM"], errors="coerce")
+    df["Purchase Price Per Code UOM"] = pd.to_numeric(df["Purchase Price Per Code UOM"].astype(str).str.replace("[$,]", "", regex=True), errors="coerce")
 
-    # Reimbursement Calculations
     df["ASP Reimbursement"] = df["Purchase Price Per Code UOM"] * 1.04
     df["AWP Reimbursement"] = df["Purchase Price Per Code UOM"] * 0.81
     df["ASP Profit/Loss"] = df["ASP Reimbursement"] - df["Purchase Price Per Code UOM"]
@@ -32,7 +31,8 @@ if uploaded_file is not None:
 
     st.sidebar.title("🔧 Adjust Inputs")
     courier_rate = st.sidebar.number_input("Courier Cost per Rx", min_value=0.0, value=8.0, step=0.5)
-    misc_expense = st.sidebar.number_input("Misc. Supply Cost per Rx (Boxes, Bags, Insulation)", min_value=0.0, value=2.0, step=0.5)
+    misc_expense = st.sidebar.number_input("Misc. Supply Cost per Rx", min_value=0.0, value=2.0, step=0.5)
+    medihive_share_percent = st.sidebar.slider("MediHiveRx % Share", min_value=0.0, max_value=100.0, value=20.0, step=1.0)
 
     st.sidebar.title("🏥 Non-MediHiveRx Factors")
     pharmacist_cost = st.sidebar.number_input("Pharmacist Labor Cost (6 months)", min_value=0.0, step=500.0)
@@ -47,18 +47,22 @@ if uploaded_file is not None:
     df_medi = df.copy()
     df_medi["6M ASP Total"] = df_medi["ASP All Dispense"] - df_medi["Total Variable Cost"]
     df_medi["6M AWP Total"] = df_medi["AWP All Dispense"] - df_medi["Total Variable Cost"]
-    df_medi["MediHive ASP Share"] = df_medi["6M ASP Total"] * 0.20
-    df_medi["MediHive AWP Share"] = df_medi["6M AWP Total"] * 0.20
+    df_medi["MediHive ASP Share"] = df_medi["6M ASP Total"] * (medihive_share_percent / 100)
+    df_medi["MediHive AWP Share"] = df_medi["6M AWP Total"] * (medihive_share_percent / 100)
 
     df_nonmedi = df.copy()
-    nonmed_total_cost = pharmacist_cost + technician_cost + emr_cost + psao_cost
-    df_nonmedi["6M ASP Total"] = df_nonmedi["ASP All Dispense"] - df_nonmedi["Total Variable Cost"] - (nonmed_total_cost / len(df_nonmedi))
-    df_nonmedi["6M AWP Total"] = df_nonmedi["AWP All Dispense"] - df_nonmedi["Total Variable Cost"] - (nonmed_total_cost / len(df_nonmedi))
+    total_nonmedi_expense = pharmacist_cost + technician_cost + emr_cost + psao_cost
+    df_nonmedi["6M ASP Total"] = df_nonmedi["ASP All Dispense"] - df_nonmedi["Total Variable Cost"] - (total_nonmedi_expense / len(df_nonmedi))
+    df_nonmedi["6M AWP Total"] = df_nonmedi["AWP All Dispense"] - df_nonmedi["Total Variable Cost"] - (total_nonmedi_expense / len(df_nonmedi))
 
-    st.subheader("📋 MediHive Scenario (20% Service Share)")
+    st.subheader("📋 MediHive Scenario")
     st.dataframe(df_medi, use_container_width=True)
+    st.markdown(f"**Total ASP Profit:** ${df_medi['6M ASP Total'].sum():,.2f}")
+    st.markdown(f"**Total AWP Profit:** ${df_medi['6M AWP Total'].sum():,.2f}")
+    st.markdown(f"**MediHive ASP Share ({medihive_share_percent:.0f}%):** ${df_medi['MediHive ASP Share'].sum():,.2f}")
+    st.markdown(f"**MediHive AWP Share ({medihive_share_percent:.0f}%):** ${df_medi['MediHive AWP Share'].sum():,.2f}")
 
-    st.subheader("📋 Non-MediHive Scenario (Full Labor Deduction)")
+    st.subheader("📋 Non-MediHive Scenario")
     st.dataframe(df_nonmedi, use_container_width=True)
 
     st.subheader("📘 Calculation Explanations")
@@ -67,16 +71,15 @@ if uploaded_file is not None:
     - **AWP Reimbursement** = Purchase Price Per Code UOM × 0.81  
     - **ASP Profit/Loss** = ASP Reimbursement − Purchase Price Per Code UOM  
     - **AWP Profit/Loss** = AWP Reimbursement − Purchase Price Per Code UOM  
-    - **ASP per Rx** = Dose × ASP Profit/Loss  
-    - **AWP per Rx** = Dose × AWP Profit/Loss  
+    - **ASP per Rx** = Total Unit of Measure × ASP Profit/Loss  
+    - **AWP per Rx** = Total Unit of Measure × AWP Profit/Loss  
     - **ASP All Dispense** = ASP per Rx × Rx Count  
     - **AWP All Dispense** = AWP per Rx × Rx Count  
     - **Courier Cost** = Rx Count × Courier Rate  
     - **Misc Cost** = Rx Count × Misc Supply Cost  
     - **Total Variable Cost** = Courier + Misc  
-    - **MediHive 6M Total** = (ASP or AWP All Dispense − Total Variable Cost)  
-    - **MediHive Share** = 20% of MediHive 6M Profit  
-    - **Non-MediHive 6M Profit** = (ASP or AWP All Dispense − Total Variable Cost − Total Labor/EMR/PSAO costs)  
+    - **MediHive Share** = MediHive % × ASP or AWP Profit (after variable costs)  
+    - **Non-MediHive Profit** = Total Profit − (Pharmacist + Tech + EMR + PSAO)  
     """)
 
 else:
