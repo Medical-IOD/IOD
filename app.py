@@ -169,15 +169,45 @@ non["ASP Profit (6m)"] = non["ASP All Dispense"] - total_var_cost - staff_cost/l
 non["AWP Profit (6m)"] = non["AWP All Dispense"] - total_var_cost - staff_cost/len(non)
 
 # Display both scenario tables
-st.data_editor(medi, use_container_width=True, key="medi_editor", num_rows="dynamic")
-st.subheader("🔢 Non-MediHive Scenario")
-st.data_editor(non, use_container_width=True, key="non_editor_filtered" if filter_toggle else "non_editor_all", num_rows="dynamic")
-col1.data_editor(medi, use_container_width=True, key="medi_editor_filtered" if filter_toggle else "medi_editor_all", num_rows="dynamic")
-st.subheader("🔢 Non-MediHive Scenario")
-st.data_editor(non, use_container_width=True, key="non_editor_filtered" if filter_toggle else "non_editor_all", num_rows="dynamic")
 
-st.subheader("🔢 Non-MediHive Scenario")
-st.data_editor(non, use_container_width=True, key="non_editor", num_rows="dynamic")
+save_changes = st.button("🔖 Save All Changes")
+reset_data = st.button("↺ Reset to Original Upload")
+
+if save_changes:
+    st.success("Changes saved successfully (note: implement actual saving logic).")
+
+if reset_data:
+    st.session_state.df_original = st.session_state.uploaded_df.copy()
+    st.session_state.df_current = st.session_state.df_original.copy()
+    st.success("Data reset to original upload.")
+
+st.markdown("""
+### 🔢 Finalized Tables
+Use the toggle to filter for profitable drugs only. Tables are editable. Add rows as needed.
+""")
+
+col1, col2 = st.columns([3, 1])
+with col1:
+    st.subheader("MediHive Scenario")
+with col2:
+    filter_toggle = st.checkbox("Only show profitable drugs", value=True, key="profitable_toggle")
+
+if filter_toggle:
+    mask = (df["ASP All Dispense"] - total_var_cost > 0) | (df["AWP All Dispense"] - total_var_cost > 0)
+    df = df[mask].reset_index(drop=True)
+
+medi = df.copy()
+medi["ASP Profit (6m)"] = medi["ASP All Dispense"] - total_var_cost
+medi["AWP Profit (6m)"] = medi["AWP All Dispense"] - total_var_cost
+medi["MediHive Share AWP"] = medi["AWP Profit (6m)"] * (share_pct / 100)
+
+non = df.copy()
+non["ASP Profit (6m)"] = non["ASP All Dispense"] - total_var_cost - staff_cost / len(non)
+non["AWP Profit (6m)"] = non["AWP All Dispense"] - total_var_cost - staff_cost / len(non)
+
+col1.data_editor(medi, use_container_width=True, key="medi_editor_filtered" if filter_toggle else "medi_editor_all", num_rows="dynamic")
+st.subheader("Non-MediHive Scenario")
+st.data_editor(non, use_container_width=True, key="non_editor_filtered" if filter_toggle else "non_editor_all", num_rows="dynamic")
 
 # Debug table for ASP profitability
 st.subheader("🔢 ASP Profit Debug Table")
