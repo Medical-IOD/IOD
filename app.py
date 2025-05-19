@@ -5,10 +5,9 @@ import re
 
 st.set_page_config(page_title="MediHiveRx Profitability Tool", layout="wide")
 
-# --- HEADER ---
 st.markdown("""
 <h1 style='text-align: center; background-color: #004466; padding: 20px; color: white; border-radius: 8px;'>
-    💊 MediHiveRx In-Office Dispensing Profitability Tool
+    📊 MediHiveRx In-Office Dispensing Profitability Tool
 </h1>
 """, unsafe_allow_html=True)
 
@@ -33,41 +32,30 @@ tech_count = st.sidebar.number_input("Technicians (FTE)", value=1.0)
 emr_cost = st.sidebar.number_input("EMR Monthly Fee ($)", value=500.0)
 psao_fee = st.sidebar.number_input("PSAO Monthly Fee ($)", value=300.0)
 
-# --- DATA PROCESSING ---
-def clean_currency_column(series):
+# --- UTILS ---
+def clean_currency(series):
     return (
         series.astype(str)
         .str.replace(r"[^\d\-.]", "", regex=True)
-        .str.replace(r"−", "-", regex=True)
-        .str.strip()
-        .apply(lambda x: float(x) if re.match(r"^-?\d+(\.\d+)?$", x) else np.nan)
+        .replace("", "0")
+        .astype(float)
     )
+
+def extract_uom(series):
+    return pd.to_numeric(series.astype(str).str.extract(r'(\d+(\.\d+)?)')[0], errors='coerce').fillna(1)
 
 def prepare_data(df):
     df = df.copy()
 
-    currency_cols = [
-        "ASP Profit/Loss", "AWP Profit/Loss", "NDC Purchase Price",
-        "Purchase Price Per Code UOM", "CMS Payment Limit Profit/Loss"
-    ]
-    for col in currency_cols:
-        if col in df.columns:
-            df[col] = clean_currency_column(df[col])
-        else:
-            st.warning(f"Missing required column: {col}. Filling with zeros.")
-            df[col] = 0.0
+    df["ASP Profit/Loss"] = clean_currency(df["ASP Profit/Loss"])
+    df["AWP Profit/Loss"] = clean_currency(df["AWP Profit/Loss"])
+    df["Code UOM"] = extract_uom(df["Code UOM"])
+    df["Dose"] = pd.to_numeric(df["Dose"], errors="coerce").fillna(0)
+    df["Rx Count"] = pd.to_numeric(df["Rx Count"], errors="coerce").fillna(0)
 
-    required_cols = ["Dose", "Rx Count", "Code UOM"]
-    for col in required_cols:
-        if col not in df.columns:
-            st.warning(f"Missing required column: {col}. Filling with zeros.")
-            df[col] = 0.0
-        df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
+    df["ASP per Rx"] = (df["Dose"] / df["Code UOM"]) * df["ASP Profit/Loss"]
+    df["AWP per Rx"] = (df["Dose"] / df["Code UOM"]) * df["AWP Profit/Loss"]
 
-    safe_uom = df["Code UOM"].replace(0, np.nan).fillna(1)
-    dose = df["Dose"].fillna(0)
-    df["ASP per Rx"] = (dose / safe_uom) * df["ASP Profit/Loss"].fillna(0)
-    df["AWP per Rx"] = (dose / safe_uom) * df["AWP Profit/Loss"].fillna(0)
     df["ASP All Dispense"] = df["ASP per Rx"] * df["Rx Count"]
     df["AWP All Dispense"] = df["AWP per Rx"] * df["Rx Count"]
 
@@ -80,7 +68,7 @@ def filter_profitable(df):
 
 # --- MAIN ---
 if uploaded_file:
-    df_raw = pd.read_excel(uploaded_file, sheet_name="Drug-Profitability")
+    df_raw = pd.read_excel(uploaded_file, sheet_name=0)
     df = prepare_data(df_raw)
     vol = df["Rx Count"].sum()
 
@@ -131,16 +119,5 @@ if uploaded_file:
     st.write(f"**AWP Profit:** ${awp_profit_non:,.2f}")
     st.write(f"**Non-MediHive Expenses:** ${nonmedi_expense_total:,.2f}")
     st.write(f"**Total AWP Net:** ${awp_profit_non:,.2f}")
-
-    st.markdown("---")
-    st.markdown("### Hypothetical Target Calculator")
-    col1, col2 = st.columns(2)
-    with col1:
-        target_rev = st.number_input("Target Revenue ($)", value=500000.0)
-    with col2:
-        target_margin_pct = st.slider("Target Profit Margin %", min_value=0.0, max_value=100.0, value=5.0)
-
-    target_profit = target_rev * (target_margin_pct / 100)
-    st.success(f"**Target Profit = ${target_profit:,.2f}** from ${target_rev:,.2f} in Revenue at {target_margin_pct:.1f}% margin")
 else:
     st.info("Please upload a data file to begin.")
