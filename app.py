@@ -12,15 +12,15 @@
 ---  
 
 ## 📄 Column Definitions  
-| Column Name             | Description                                      |  
-|-------------------------|--------------------------------------------------|  
-| `Medication`            | Drug name                                        |  
-| `Strength`              | Dosage strength                                  |  
-| `Code UOM`              | Units per dispense (e.g., TAB, EA, G, ML)        |  
-| `Dose`                  | Total units per Rx                                |  
-| `Rx Count`              | Number of dispenses (Refill + 1)                  |  
-| `AWP Profit/Loss`       | AWP-based profit per Rx (AWP per unit)            |  
-| `ASP Profit/Loss`       | ASP-based profit per Rx (AWP×(1−discount%))       |  
+| Column Name             | Description                                              |  
+|-------------------------|----------------------------------------------------------|  
+| `Medication`            | Drug name                                                |  
+| `Strength`              | Dosage strength                                          |  
+| `Code UOM`              | Units per dispense (e.g., TAB, EA, G, ML)                |  
+| `Dose`                  | Total units per Rx                                       |  
+| `Rx Count`              | Number of dispenses (Refill + 1)                         |  
+| `AWP Profit/Loss`       | AWP-based profit per Rx (AWP per unit)                   |  
+| `ASP Profit/Loss`       | ASP-based profit per Rx (AWP * (1 - discount%))          |  
 
 ---  
 
@@ -70,24 +70,24 @@ def clean_currency(series):
     )
 
 def extract_uom(series):
-    return pd.to_numeric(series.astype(str).str.extract(r'(\d+(?:\.\d+)?)')[0], errors='coerce').fillna(1)
+    return pd.to_numeric(series.astype(str).str.extract(r"(\d+(?:\.\d+)?)")[0], errors='coerce').fillna(1)
 
 def prepare_data(df):
     df = df.copy()
-    df["ASP Profit/Loss"] = clean_currency(df["ASP Profit/Loss"])
-    df["AWP Profit/Loss"] = clean_currency(df["AWP Profit/Loss"])
-    df["Code UOM"] = extract_uom(df["Code UOM"])
-    df["Dose"] = pd.to_numeric(df["Dose"], errors="coerce").fillna(0)
-    df["Rx Count"] = pd.to_numeric(df["Rx Count"], errors="coerce").fillna(0)
-    df["ASP All Dispense"] = df["ASP Profit/Loss"] * df["Rx Count"]
-    df["AWP All Dispense"] = df["AWP Profit/Loss"] * df["Rx Count"]
+    df['ASP Profit/Loss'] = clean_currency(df['ASP Profit/Loss'])
+    df['AWP Profit/Loss'] = clean_currency(df['AWP Profit/Loss'])
+    df['Code UOM'] = extract_uom(df['Code UOM'])
+    df['Dose'] = pd.to_numeric(df['Dose'], errors='coerce').fillna(0)
+    df['Rx Count'] = pd.to_numeric(df['Rx Count'], errors='coerce').fillna(0)
+    df['ASP All Dispense'] = df['ASP Profit/Loss'] * df['Rx Count']
+    df['AWP All Dispense'] = df['AWP Profit/Loss'] * df['Rx Count']
     return df
 
 # --- MAIN ---
 if uploaded_file:
     df_raw = pd.read_excel(uploaded_file)
     df = prepare_data(df_raw)
-    total_rx = df["Rx Count"].sum()
+    total_rx = df['Rx Count'].sum()
 
     courier_total = courier_cost_per_rx * total_rx
     misc_total = misc_cost_per_rx * total_rx
@@ -101,8 +101,8 @@ if uploaded_file:
     st.data_editor(df, use_container_width=True)
 
     # Financial Summary
-    asp_rev = df["ASP All Dispense"].sum()
-    awp_rev = df["AWP All Dispense"].sum()
+    asp_rev = df['ASP All Dispense'].sum()
+    awp_rev = df['AWP All Dispense'].sum()
     asp_profit = asp_rev - (courier_total + misc_total)
     awp_profit = awp_rev - (courier_total + misc_total)
     share_amt = awp_profit * (medihive_share_pct / 100)
