@@ -61,9 +61,14 @@ if uploaded_file:
     if show_only_profitable:
         df = df[(df['ASP Profit/Loss'] > 0) | (df['AWP Profit/Loss'] > 0)]
 
+    # Format dollar columns for display
+    df_display = df.copy()
+    for col in ['ASP All Dispense', 'AWP All Dispense']:
+        df_display[col] = df_display[col].map('${:,.2f}'.format)
+
     # MediHiveRx Scenario
-    st.subheader("### MediHiveRx Scenario")
-    st.data_editor(df, use_container_width=True)
+    st.subheader('### MediHiveRx Scenario')
+    st.data_editor(df_display, use_container_width=True)
 
     # Financial Summary
     asp_rev = df['ASP All Dispense'].sum()
@@ -73,7 +78,7 @@ if uploaded_file:
     share_amt = awp_profit * (medihive_share_pct / 100)
     net_awp = awp_profit - share_amt
 
-    st.subheader("### Financial Summary – MediHiveRx")
+    st.subheader('### Financial Summary – MediHiveRx')
     st.write(f"**ASP Revenue:** ${asp_rev:,.2f}")
     st.write(f"**ASP Profit:** ${asp_profit:,.2f}")
     st.write(f"**AWP Revenue:** ${awp_rev:,.2f}")
@@ -82,10 +87,10 @@ if uploaded_file:
     st.write(f"**Net AWP:** ${net_awp:,.2f}")
 
     # Top 5 Profitable Medications (ASP)
-    st.markdown("---")
-    st.subheader("### Top 5 Profitable Medications (ASP)")
+    st.markdown('---')
+    st.subheader('### Top 5 Profitable Medications (ASP)')
     top5 = df.groupby('Medication')['ASP All Dispense'].sum().nlargest(5)
     st.bar_chart(top5)
     st.dataframe(top5.rename('Total ASP Profit').reset_index())
 else:
-    st.info("Please upload a data file to begin.")
+    st.info('Please upload a data file to begin.')
