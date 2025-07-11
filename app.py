@@ -68,18 +68,17 @@ def main():
     courier_total = courier_cost * total_rx
     misc_total    = misc_cost * total_rx
     acq_total     = (df["Acq_per_unit"] * df["Total Units"]).sum()
-    asp_profit    = df["Total_Net_Profit"].sum()
+    # Removed ASP Profit KPI
     awp_profit    = (df["AWP_per_unit"] * df["Total Units"]).sum() - (courier_total + misc_total + acq_total)
     share_amt     = awp_profit * (medihive_share/100)
     net_awp       = awp_profit - share_amt
-    gross_margin  = (asp_profit / acq_total * 100) if acq_total else 0
-    # Display KPIs (removed Total Acquisition)
-    cols = st.columns(5)
-    cols[0].metric("Total Rx", total_rx)
-    cols[1].metric("Total ASP Profit",  f"${asp_profit:,.2f}")
-    cols[2].metric("Total AWP Profit",  f"${awp_profit:,.2f}")
-    cols[3].metric("MediHive Share",      f"${share_amt:,.2f}")
-    cols[4].metric("Gross Margin %",      f"{gross_margin:.1f}%")
+    gross_margin  = (df["Total_Net_Profit"].sum() / acq_total * 100) if acq_total else 0
+    # Display KPIs (4 metrics)
+    k1, k2, k3, k4 = st.columns(4)
+    k1.metric("Total Rx", total_rx)
+    k2.metric("Total AWP Profit", f"${awp_profit:,.2f}")
+    k3.metric("MediHive Share", f"${share_amt:,.2f}")
+    k4.metric("Gross Margin %", f"{gross_margin:.1f}%")
     # Detailed table
     display = df[["Medication","Strength","Dose","Rx Count","Total Units",
                   "Acq_per_unit","AWP_per_unit","Markedup_Price",
@@ -101,4 +100,3 @@ def main():
 
 if __name__ == "__main__":
     main()
- 
