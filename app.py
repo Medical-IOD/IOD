@@ -44,6 +44,11 @@ def prepare_data(df):
     df['Rx Count'] = pd.to_numeric(df['Rx Count'], errors='coerce').fillna(0)
     df['ASP All Dispense'] = df['ASP Profit/Loss'] * df['Rx Count']
     df['AWP All Dispense'] = df['AWP Profit/Loss'] * df['Rx Count']
+    df['Acquisition Cost'] = clean_currency(df['Acquisition Cost'])
+df['Acq All Dispense'] = df['Acquisition Cost'] * df['Rx Count']
+# Then deduct Acq All Dispense instead of AWP revenue when computing net profit and margin.
+
+    
     return df
 
 # --- MAIN ---
