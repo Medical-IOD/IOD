@@ -1,48 +1,11 @@
-# MediHiveRx In-Office Dispensing Profitability Tool  
-
-## 👤 Physician: Dr. Lindwall  
-**Purpose**: Evaluate profitability of in-office dispensed medications via the MediHiveRx Streamlit app.  
-
----  
-
-## 📊 Prepared File  
-**Filename**: `Lindwall_MediHiveRx_AWP_Corrected.xlsx`  
-**Download**: [Lindwall_MediHiveRx_AWP_Corrected.xlsx](sandbox:/mnt/data/Lindwall_MediHiveRx_AWP_Corrected.xlsx)  
-
----  
-
-## 📄 Column Definitions  
-| Column Name             | Description                                              |  
-|-------------------------|----------------------------------------------------------|  
-| `Medication`            | Drug name                                                |  
-| `Strength`              | Dosage strength                                          |  
-| `Code UOM`              | Units per dispense (e.g., TAB, EA, G, ML)                |  
-| `Dose`                  | Total units per Rx                                       |  
-| `Rx Count`              | Number of dispenses (Refill + 1)                         |  
-| `AWP Profit/Loss`       | AWP-based profit per Rx (AWP per unit)                   |  
-| `ASP Profit/Loss`       | ASP-based profit per Rx (AWP * (1 - discount%))          |  
-
----  
-
-## ⚙️ Global Settings (Sidebar Inputs)  
-- Courier Cost per Rx  
-- Misc Supply Cost per Rx  
-- MediHiveRx Share %  
-- Pharmacist Hourly Rate & FTE  
-- Technician Hourly Rate & FTE  
-- EMR Monthly Fee  
-- PSAO Monthly Fee  
-
----  
-
-## 💻 Streamlit App Script  
 ```python
 import streamlit as st
 import pandas as pd
 
 st.set_page_config(page_title="MediHiveRx Profitability Tool", layout="wide")
 
-st.markdown("""
+st.markdown(
+"""
 <h1 style='text-align: center; background-color: #004466; padding: 20px; color: white; border-radius: 8px;'>
     📊 MediHiveRx In-Office Dispensing Profitability Tool
 </h1>
@@ -50,7 +13,7 @@ st.markdown("""
 
 # --- FILE UPLOAD ---
 st.sidebar.header("Upload Excel File")
-uploaded_file = st.sidebar.file_uploader("Choose Excel file", type=[".xlsx"])
+uploaded_file = st.sidebar.file_uploader("Choose Excel file", type=["xlsx"])
 
 # --- USER INPUTS ---
 st.sidebar.markdown("---")
