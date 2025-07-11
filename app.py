@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import re
 
 st.set_page_config(page_title="MediHiveRx Profitability Tool", layout="wide")
 
@@ -20,9 +19,9 @@ uploaded_file = st.sidebar.file_uploader("Choose Excel file", type=[".xlsx"])
 st.sidebar.markdown("---")
 st.sidebar.subheader("Global Settings")
 show_only_profitable = st.sidebar.checkbox("Only Show Profitable Drugs", value=True)
-courier_cost_per_rx = st.sidebar.number_input("Courier Cost per Rx", min_value=0.0, value=8.0)
-misc_cost_per_rx = st.sidebar.number_input("Misc Supply Cost per Rx", min_value=0.0, value=1.5)
-medihive_share_pct = st.sidebar.slider("MediHiveRx Share %", min_value=0, max_value=100, value=20)
+courier_cost_per_rx = st.sidebar.number_input("Courier Cost per Rx", value=8.0, min_value=0.0)
+misc_cost_per_rx = st.sidebar.number_input("Misc Supply Cost per Rx", value=1.5, min_value=0.0)
+medihive_share_pct = st.sidebar.slider("MediHiveRx Share %", 0, 100, 20)
 
 # --- UTILS ---
 def clean_currency(series):
@@ -52,14 +51,12 @@ if uploaded_file:
     df_raw = pd.read_excel(uploaded_file)
     df = prepare_data(df_raw)
     total_rx = int(df['Rx Count'].sum())
-
     courier_total = courier_cost_per_rx * total_rx
     misc_total = misc_cost_per_rx * total_rx
-
     if show_only_profitable:
         df = df[(df['ASP Profit/Loss'] > 0) | (df['AWP Profit/Loss'] > 0)]
 
-    # Summary KPIs
+    # Calculate summary metrics
     asp_rev = df['ASP All Dispense'].sum()
     awp_rev = df['AWP All Dispense'].sum()
     asp_profit = asp_rev - (courier_total + misc_total)
@@ -67,11 +64,14 @@ if uploaded_file:
     share_amt = awp_profit * (medihive_share_pct / 100)
     net_awp = awp_profit - share_amt
 
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Total Rx", f"{total_rx}")
-    col2.metric("ASP Profit", f"${asp_profit:,.2f}")
-    col3.metric("AWP Profit", f"${awp_profit:,.2f}")
-    col4.metric("MediHiveRx Share", f"${share_amt:,.2f}")
+    # Display KPIs
+    k1, k2, k3, k4, k5 = st.columns(5)
+    k1.metric("Total Rx", total_rx)
+    k2.metric("ASP Profit", f"${asp_profit:,.2f}")
+    k3.metric("AWP Profit", f"${awp_profit:,.2f}")
+    k4.metric("MediHiveRx Share", f"${share_amt:,.2f}")
+    avg_asp_profit_rx = asp_profit / total_rx if total_rx else 0
+    k5.metric("Avg ASP Profit/Rx", f"${avg_asp_profit_rx:,.2f}")
 
     # Detailed Table
     df_display = df.copy()
@@ -81,16 +81,40 @@ if uploaded_file:
     st.data_editor(df_display, use_container_width=True)
 
     # Top 5 Profitable Medications
-    top5 = df.groupby('Medication')['ASP All Dispense'].sum().nlargest(5)
+    st.markdown('---')
     st.subheader("Top 5 Medications by ASP Profit")
+    top5 = df.groupby('Medication')['ASP All Dispense'].sum().nlargest(5)
     st.bar_chart(top5)
     top5_df = top5.rename('Total ASP Profit').reset_index()
     top5_df['Total ASP Profit'] = top5_df['Total ASP Profit'].map('${:,.2f}'.format)
     st.table(top5_df)
 
-    # Profit Share Pie Chart
-    st.markdown('ASP Profit Share')
-    fig = top5.plot.pie(autopct='%1.1f%%', ylabel='').get_figure()
-    st.pyplot(fig)
+    # Feature 1: Average AWP Profit per Rx
+    avg_awp_profit_rx = awp_profit / total_rx if total_rx else 0
+    st.subheader("Average AWP Profit per Rx")
+    st.write(f"${avg_awp_profit_rx:,.2f}")
+
+    # Feature 2: Volume vs ASP Profit per Rx Scatter
+    profit_per_med = df.groupby('Medication').agg({'Rx Count':'sum','ASP All Dispense':'sum'})
+    profit_per_med['Profit per Rx'] = profit_per_med['ASP All Dispense'] / profit_per_med['Rx Count']
+    st.subheader("Volume vs ASP Profit per Rx")
+    st.vega_lite_chart(profit_per_med.reset_index(), {
+        "mark": "circle",
+        "encoding": {
+            "x": {"field": "Rx Count", "type": "quantitative"},
+            "y": {"field": "Profit per Rx", "type": "quantitative"},
+            "size": {"field": "ASP All Dispense", "type": "quantitative"},
+            "color": {"field": "Medication", "type": "nominal"},
+            "tooltip": [
+                {"field":"Medication","type":"nominal"},
+                {"field":"Rx Count","type":"quantitative"},
+                {"field":"Profit per Rx","type":"quantitative","format":"$.2f"}
+            ]
+        }
+    }, use_container_width=True)
+
+    # Download Top5 as CSV
+    csv = top5_df.to_csv(index=False)
+    st.download_button("Download Top 5 ASP Profits", csv, file_name="top5_asp_profits.csv", mime="text/csv")
 else:
-    st.info('Please upload a data file to begin.')
+    st.info("Please upload a data file to begin.")
