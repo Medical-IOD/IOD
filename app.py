@@ -26,12 +26,10 @@ medihive_share_pct = st.sidebar.slider("MediHiveRx Share %", min_value=0, max_va
 
 # --- UTILS ---
 def clean_currency(series):
-    return (
-        series.astype(str)
-              .str.replace(r"[^\d\-.]", "", regex=True)
-              .replace("", "0")
-              .astype(float)
-    )
+    return (series.astype(str)
+                  .str.replace(r"[^\d\-.]", "", regex=True)
+                  .replace("", "0")
+                  .astype(float))
 
 def extract_uom(series):
     return pd.to_numeric(series.astype(str)
@@ -53,7 +51,7 @@ def prepare_data(df):
 if uploaded_file:
     df_raw = pd.read_excel(uploaded_file)
     df = prepare_data(df_raw)
-    total_rx = df['Rx Count'].sum()
+    total_rx = int(df['Rx Count'].sum())
 
     courier_total = courier_cost_per_rx * total_rx
     misc_total = misc_cost_per_rx * total_rx
@@ -61,16 +59,7 @@ if uploaded_file:
     if show_only_profitable:
         df = df[(df['ASP Profit/Loss'] > 0) | (df['AWP Profit/Loss'] > 0)]
 
-    # Format dollar columns for display
-    df_display = df.copy()
-    for col in ['ASP All Dispense', 'AWP All Dispense']:
-        df_display[col] = df_display[col].map('${:,.2f}'.format)
-
-    # MediHiveRx Scenario
-    st.subheader('### MediHiveRx Scenario')
-    st.data_editor(df_display, use_container_width=True)
-
-    # Financial Summary
+    # Format numeric summary
     asp_rev = df['ASP All Dispense'].sum()
     awp_rev = df['AWP All Dispense'].sum()
     asp_profit = asp_rev - (courier_total + misc_total)
@@ -78,19 +67,37 @@ if uploaded_file:
     share_amt = awp_profit * (medihive_share_pct / 100)
     net_awp = awp_profit - share_amt
 
-    st.subheader('### Financial Summary – MediHiveRx')
-    st.write(f"**ASP Revenue:** ${asp_rev:,.2f}")
-    st.write(f"**ASP Profit:** ${asp_profit:,.2f}")
-    st.write(f"**AWP Revenue:** ${awp_rev:,.2f}")
-    st.write(f"**AWP Profit:** ${awp_profit:,.2f}")
-    st.write(f"**MediHiveRx Share (AWP):** ${share_amt:,.2f}")
-    st.write(f"**Net AWP:** ${net_awp:,.2f}")
+    # Display KPIs
+    st.subheader("### Key Metrics")
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("Total Rx", f"{total_rx}")
+    col2.metric("ASP Profit", f"${asp_profit:,.2f}")
+    col3.metric("AWP Profit", f"${awp_profit:,.2f}")
+    col4.metric("MediHiveRx Share", f"${share_amt:,.2f}")
+
+    # MediHiveRx Scenario Table
+    st.subheader('### MediHiveRx Detailed Table')
+    df_display = df.copy()
+    for col in ['ASP All Dispense', 'AWP All Dispense']:
+        df_display[col] = df_display[col].map('${:,.2f}'.format)
+    st.data_editor(df_display, use_container_width=True)
 
     # Top 5 Profitable Medications (ASP)
     st.markdown('---')
-    st.subheader('### Top 5 Profitable Medications (ASP)')
+    st.subheader('### Top 5 Medications by ASP Profit')
     top5 = df.groupby('Medication')['ASP All Dispense'].sum().nlargest(5)
+    # Format and show bar chart
     st.bar_chart(top5)
-    st.dataframe(top5.rename('Total ASP Profit').reset_index())
+    top5_df = top5.rename('Total ASP Profit').reset_index()
+    top5_df['Total ASP Profit'] = top5_df['Total ASP Profit'].map('${:,.2f}'.format)
+    st.table(top5_df)
+
+    # Profit Share Pie Chart
+    st.markdown('#### ASP Profit Share')
+    profit_pie = top5 / top5.sum()
+    st.pyplot(
+        profit_pie.plot.pie(autopct='%1.1f%%', ylabel='').get_figure()
+    )
 else:
     st.info('Please upload a data file to begin.')
+```
