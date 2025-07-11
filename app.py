@@ -73,14 +73,13 @@ def main():
     share_amt     = awp_profit * (medihive_share/100)
     net_awp       = awp_profit - share_amt
     gross_margin  = (asp_profit / acq_total * 100) if acq_total else 0
-    # Display KPIs
-    cols = st.columns(6)
+    # Display KPIs (removed Total Acquisition)
+    cols = st.columns(5)
     cols[0].metric("Total Rx", total_rx)
-    cols[1].metric("Total Acquisition", f"${acq_total:,.2f}")
-    cols[2].metric("Total ASP Profit", f"${asp_profit:,.2f}")
-    cols[3].metric("Total AWP Profit", f"${awp_profit:,.2f}")
-    cols[4].metric("MediHive Share", f"${share_amt:,.2f}")
-    cols[5].metric("Gross Margin %", f"{gross_margin:.1f}%")
+    cols[1].metric("Total ASP Profit",  f"${asp_profit:,.2f}")
+    cols[2].metric("Total AWP Profit",  f"${awp_profit:,.2f}")
+    cols[3].metric("MediHive Share",      f"${share_amt:,.2f}")
+    cols[4].metric("Gross Margin %",      f"{gross_margin:.1f}%")
     # Detailed table
     display = df[["Medication","Strength","Dose","Rx Count","Total Units",
                   "Acq_per_unit","AWP_per_unit","Markedup_Price",
