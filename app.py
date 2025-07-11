@@ -1,19 +1,20 @@
-```python
 import streamlit as st
 import pandas as pd
+import numpy as np
+import re
 
 st.set_page_config(page_title="MediHiveRx Profitability Tool", layout="wide")
 
 st.markdown(
-"""
-<h1 style='text-align: center; background-color: #004466; padding: 20px; color: white; border-radius: 8px;'>
-    📊 MediHiveRx In-Office Dispensing Profitability Tool
-</h1>
-""", unsafe_allow_html=True)
+    """
+    <h1 style='text-align: center; background-color: #004466; padding: 20px; color: white; border-radius: 8px;'>
+        📊 MediHiveRx In-Office Dispensing Profitability Tool
+    </h1>
+    """, unsafe_allow_html=True)
 
 # --- FILE UPLOAD ---
 st.sidebar.header("Upload Excel File")
-uploaded_file = st.sidebar.file_uploader("Choose Excel file", type=["xlsx"])
+uploaded_file = st.sidebar.file_uploader("Choose Excel file", type=[".xlsx"])
 
 # --- USER INPUTS ---
 st.sidebar.markdown("---")
@@ -27,13 +28,15 @@ medihive_share_pct = st.sidebar.slider("MediHiveRx Share %", min_value=0, max_va
 def clean_currency(series):
     return (
         series.astype(str)
-        .str.replace(r"[^\d\-.]", "", regex=True)
-        .replace("", "0")
-        .astype(float)
+              .str.replace(r"[^\d\-.]", "", regex=True)
+              .replace("", "0")
+              .astype(float)
     )
 
 def extract_uom(series):
-    return pd.to_numeric(series.astype(str).str.extract(r"(\d+(?:\.\d+)?)")[0], errors='coerce').fillna(1)
+    return pd.to_numeric(series.astype(str)
+                             .str.extract(r"(\d+(?:\.\d+)?)")[0],
+                      errors='coerce').fillna(1)
 
 def prepare_data(df):
     df = df.copy()
@@ -55,7 +58,6 @@ if uploaded_file:
     courier_total = courier_cost_per_rx * total_rx
     misc_total = misc_cost_per_rx * total_rx
 
-    # Filter profitable if selected
     if show_only_profitable:
         df = df[(df['ASP Profit/Loss'] > 0) | (df['AWP Profit/Loss'] > 0)]
 
@@ -87,4 +89,3 @@ if uploaded_file:
     st.dataframe(top5.rename('Total ASP Profit').reset_index())
 else:
     st.info("Please upload a data file to begin.")
-```
